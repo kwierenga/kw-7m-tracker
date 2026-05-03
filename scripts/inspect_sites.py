@@ -1,6 +1,6 @@
-"""One-off probe: fetch candidate listing pages and save raw HTML for inspection.
+r"""One-off probe: fetch candidate listing pages and save raw HTML for inspection.
 
-Run: .venv\Scripts\python.exe scripts\inspect_sites.py
+Run: .venv/Scripts/python.exe scripts/inspect_sites.py
 Output: data/inspect/<site>__<label>.html
 """
 from __future__ import annotations
@@ -19,16 +19,14 @@ UA = (
 )
 
 TARGETS: list[tuple[str, str, str]] = [
-    ("realtor_jamaica", "home", "https://www.realtorjamaica.com/"),
-    ("realtor_jamaica", "search_st_ann", "https://www.realtorjamaica.com/property/?parishes=st-ann"),
-    ("propertyads", "home", "https://propertyads.com.jm/"),
-    ("propertyads", "search_st_ann", "https://propertyads.com.jm/?location=st-ann"),
-    ("caribbean_property", "home", "https://www.caribbeanpropertylistings.com/"),
-    ("caribbean_property", "search_jamaica_ocho_rios", "https://www.caribbeanpropertylistings.com/listings/?country=jamaica&city=ocho-rios"),
-    ("century21_ja", "home", "https://www.century21jamaica.com/"),
-    ("coldwell_ja", "home", "https://www.coldwellbankerjamaica.com/"),
-    ("kw_ja", "home", "https://www.kwjamaica.com/"),
-    ("gleaner_classifieds", "home", "https://classifieds.jamaica-gleaner.com/"),
+    ("realtor_com_intl", "jamaica", "https://www.realtor.com/international/jm/"),
+    ("kw_jamaica", "home", "https://kellerwilliamsjamaica.kw.com/"),
+    ("keez", "home", "https://www.getkeez.com/"),
+    ("xposure", "home", "https://jamaica.xposureapp.com/"),
+    ("cb_jamaica", "home", "https://cbjamaica.com/"),
+    ("properstar", "buy_jamaica", "https://www.properstar.com/jamaica/buy"),
+    ("jamaica_homes", "home", "https://www.jamaica-homes.com/"),
+    ("caribbean_mls", "jamaica", "https://caribbeanrealestatemls.com/destinations/jamaica/"),
 ]
 
 
