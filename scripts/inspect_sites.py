@@ -3,9 +3,12 @@ r"""One-off probe: fetch candidate listing pages and save raw HTML for inspectio
 Run: .venv/Scripts/python.exe scripts/inspect_sites.py
 Output: data/inspect/<site>__<label>.html
 
-Uses a session with full browser-like headers to defeat basic bot blocks.
-For each (site, ...) the session is reused, so cookies set by earlier requests
-to the same host (e.g. Cloudflare clearance) carry forward.
+Uses curl_cffi with Chrome TLS fingerprint impersonation. This defeats most
+modern anti-bot (Cloudflare, Akamai etc.) by making the TCP/TLS handshake
+look like real Chrome rather than a Python HTTP client.
+
+Sessions are reused per host so cookies (e.g. CF clearance) carry across
+the warm-up + deep-link requests.
 """
 from __future__ import annotations
 
@@ -13,32 +16,12 @@ import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
-import httpx
+from curl_cffi import requests as cf
 
 OUT = Path(__file__).resolve().parent.parent / "data" / "inspect"
 OUT.mkdir(parents=True, exist_ok=True)
 
-UA = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-)
-
-HEADERS = {
-    "User-Agent": UA,
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Cache-Control": "no-cache",
-    "Pragma": "no-cache",
-    "Sec-Ch-Ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
-    "Sec-Ch-Ua-Mobile": "?0",
-    "Sec-Ch-Ua-Platform": '"Windows"',
-    "Sec-Fetch-Dest": "document",
-    "Sec-Fetch-Mode": "navigate",
-    "Sec-Fetch-Site": "none",
-    "Sec-Fetch-User": "?1",
-    "Upgrade-Insecure-Requests": "1",
-}
+IMPERSONATE = "chrome131"
 
 TARGETS: list[tuple[str, str, str]] = [
     ("realtor_com_intl", "jamaica", "https://www.realtor.com/international/jm/"),
@@ -48,7 +31,6 @@ TARGETS: list[tuple[str, str, str]] = [
     ("kw_jamaica", "listing_all", "https://kellerwilliamsjamaica.kw.com/listing/all"),
     ("kw_jamaica", "properties", "https://kellerwilliamsjamaica.kw.com/properties"),
     ("keez", "home", "https://www.getkeez.com/"),
-    ("xposure", "home", "https://jamaica.xposureapp.com/"),
     ("cb_jamaica", "home", "https://cbjamaica.com/"),
     ("properstar", "buy_jamaica", "https://www.properstar.com/jamaica/buy"),
     ("jamaica_homes", "home", "https://www.jamaica-homes.com/"),
@@ -57,43 +39,40 @@ TARGETS: list[tuple[str, str, str]] = [
 
 
 def main() -> int:
-    failures: list[tuple[str, str, str]] = []
-    sessions: dict[str, httpx.Client] = {}
+    sessions: dict[str, cf.Session] = {}
     warmed: set[str] = set()
+    failures = 0
     try:
         for site, label, url in TARGETS:
             host = urlparse(url).netloc
             if host not in sessions:
-                sessions[host] = httpx.Client(
-                    headers=HEADERS, follow_redirects=True, timeout=30, http2=False
-                )
-            client = sessions[host]
+                sessions[host] = cf.Session(impersonate=IMPERSONATE)
+            session = sessions[host]
+
             if host not in warmed:
-                # Warm the session: hit the root once so the host can drop session cookies
-                # before we ask for a deeper URL. Some bot blockers require this.
-                root = f"{urlparse(url).scheme}://{host}/"
                 try:
-                    client.get(root)
-                except httpx.HTTPError:
+                    session.get(f"https://{host}/", allow_redirects=True, timeout=30)
+                except Exception:  # noqa: BLE001
                     pass
                 warmed.add(host)
+
             try:
-                # On subsequent requests to same host, set Sec-Fetch-Site to same-origin.
-                req_headers = {} if host not in warmed else {"Sec-Fetch-Site": "same-origin"}
-                r = client.get(url, headers=req_headers)
-                final = str(r.url)
+                r = session.get(url, allow_redirects=True, timeout=30)
                 size = len(r.text)
                 fname = OUT / f"{site}__{label}.html"
                 fname.write_text(r.text, encoding="utf-8", errors="replace")
-                print(f"[{r.status_code}] {site}/{label}: {size:>7} bytes -> {final}")
+                print(f"[{r.status_code}] {site}/{label}: {size:>7} bytes -> {r.url}")
             except Exception as e:  # noqa: BLE001
-                failures.append((site, label, f"{type(e).__name__}: {e}"))
+                failures += 1
                 print(f"[ERR] {site}/{label}: {type(e).__name__}: {e}")
     finally:
-        for c in sessions.values():
-            c.close()
+        for s in sessions.values():
+            try:
+                s.close()
+            except Exception:  # noqa: BLE001
+                pass
     if failures:
-        print(f"\n{len(failures)} failure(s).")
+        print(f"\n{failures} failure(s).")
     return 0
 
 
