@@ -1,0 +1,8 @@
+# xposure InteractiveLink URLs to ingest each weekly run.
+# Paste one URL per line. Lines starting with # are ignored.
+# These tokenized URLs work without login (for prospective-buyer sharing).
+#
+# Example:
+# https://jamaica.xposureapp.com/portal/jamaica/InteractiveLink?u=24481&l=98806&t=mls&h=W81KOPPavn9xxf1NmEQFtx8yKrA%3D&pl=true
+
+https://jamaica.xposureapp.com/portal/jamaica/InteractiveLink?u=24481&l=98806&t=mls&h=W81KOPPavn9xxf1NmEQFtx8yKrA%3D&pl=true

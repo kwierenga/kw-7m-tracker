@@ -24,7 +24,7 @@ REGIONS: tuple[Region, ...] = (
         radius_miles=7.0,
         home_budget_usd=650_000,
         land_budget_usd=300_000,
-        boost_keywords=("sandals", "sandals golf", "upton", "golf course"),
+        boost_keywords=("upton estate", "upton", "sandals golf", "sandals", "golf course", "country club"),
     ),
 )
 
