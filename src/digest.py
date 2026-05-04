@@ -33,6 +33,9 @@ PAGE_TEMPLATE = Template(
   a { color: #06a; }
   .pill-new { background: #d6f5e3; color: #086c3a; padding: 1px 6px; border-radius: 8px; font-size: 80%; }
   .topnav { color: #888; font-size: 90%; }
+  .src-tag { color: #666; font-size: 85%; }
+  .also-at { color: #888; font-size: 80%; margin-left: 1.5em; display: block; }
+  .also-at a { color: #888; }
 </style>
 </head>
 <body>
@@ -58,7 +61,13 @@ PAGE_TEMPLATE = Template(
     {% if L.location_text %}<span class="meta"> &middot; {{ L.location_text }}</span>{% endif %}
     {% if L.location_confidence != 'exact' %}<span class="approx"> &middot; ({{ L.location_confidence }} location)</span>{% endif %}
     <br>
-    {% for url in L.urls %}<a href="{{ url }}">{{ url|truncate(80) }}</a><br>{% endfor %}
+    <a href="{{ L.primary_url }}">{{ L.primary_url|truncate(80) }}</a>
+    {% if L.primary_source %}<span class="src-tag"> [{{ L.primary_source }}]</span>{% endif %}
+    {% if L.other_sources %}
+    <span class="also-at">also at:
+      {% for src, url in L.other_sources %}<a href="{{ url }}">{{ src }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+    </span>
+    {% endif %}
     <span class="note">first seen: {{ L.first_seen_iso }}{% if L.listed_on_iso %} &middot; listed on site: {{ L.listed_on_iso }}{% endif %}</span>
   </li>
 {% endfor %}
@@ -72,7 +81,9 @@ PAGE_TEMPLATE = Template(
 <ul>
 {% for L in region.still_active %}
   <li>{{ L.price_label }} &mdash; {{ L.title }} &middot;
-    {% for url in L.urls %}<a href="{{ url }}">link</a> {% endfor %}
+    <a href="{{ L.primary_url }}">link</a>
+    {% if L.primary_source %}<span class="src-tag"> [{{ L.primary_source }}]</span>{% endif %}
+    {% if L.other_sources %}<span class="src-tag"> + {{ L.other_sources|length }} other</span>{% endif %}
     &middot; <span class="note">first seen {{ L.first_seen_iso }}</span>
   </li>
 {% endfor %}
@@ -143,9 +154,31 @@ def _price_label(row: dict) -> str:
     return original or "price unknown"
 
 
+SOURCE_RANK = {
+    "xposure": 1,
+    "realtor_com_intl": 2,
+    "cb_jamaica": 3,
+    "century21_jm": 4,
+    "caribbean_mls": 5,
+    "golden_gates": 6,
+    "millennium": 7,
+}
+
+
 def _row_to_view(row: dict) -> dict:
     out = dict(row)
-    out["urls"] = json.loads(row.get("urls_json") or "[]")
+    sources = json.loads(row.get("sources_json") or "[]")
+    urls = json.loads(row.get("urls_json") or "[]")
+    paired = list(zip(sources, urls))
+    paired.sort(key=lambda sv: SOURCE_RANK.get(sv[0], 99))
+    if paired:
+        out["primary_source"] = paired[0][0]
+        out["primary_url"] = paired[0][1]
+        out["other_sources"] = paired[1:]
+    else:
+        out["primary_source"] = ""
+        out["primary_url"] = ""
+        out["other_sources"] = []
     out["price_label"] = _price_label(row)
     return out
 
