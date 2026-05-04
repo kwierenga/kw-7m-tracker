@@ -18,7 +18,7 @@ class Region:
 REGIONS: tuple[Region, ...] = (
     Region(
         slug="upton",
-        name="Upton (Sandals Golf Course)",
+        name="Upton Estate Golf & Country Club",
         lat=18.38427930703869,
         lon=-77.06401634785209,
         radius_miles=7.0,
