@@ -22,8 +22,8 @@ REGIONS: tuple[Region, ...] = (
         lat=18.38427930703869,
         lon=-77.06401634785209,
         radius_miles=7.0,
-        home_budget_usd=650_000,
-        land_budget_usd=300_000,
+        home_budget_usd=800_000,
+        land_budget_usd=350_000,
         boost_keywords=("upton estate", "upton", "sandals golf", "sandals", "golf course", "country club"),
     ),
 )

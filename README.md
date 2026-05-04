@@ -14,7 +14,7 @@ Configured in [`src/regions.py`](src/regions.py):
 
 - **Center:** Upton Estate Golf & Country Club clubhouse — `18.38427930703869, -77.06401634785209`
 - **Radius:** 7 miles
-- **Budget:** homes ≤ $650K USD, land ≤ $300K USD
+- **Budget:** homes ≤ $800K USD, land ≤ $350K USD
 - **Boost keywords:** "upton estate", "upton", "sandals golf", "sandals", "golf course", "country club"
 
 Multi-region is built in — adding another spot in Jamaica is a one-line entry in `REGIONS`.
