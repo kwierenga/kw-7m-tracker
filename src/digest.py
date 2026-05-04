@@ -36,6 +36,9 @@ PAGE_TEMPLATE = Template(
   .src-tag { color: #666; font-size: 85%; }
   .also-at { color: #888; font-size: 80%; margin-left: 1.5em; display: block; }
   .also-at a { color: #888; }
+  .listing-row { display: flex; gap: 12px; align-items: flex-start; }
+  .listing-thumb { flex: 0 0 auto; width: 120px; height: 90px; object-fit: cover; border-radius: 4px; background: #eee; }
+  .listing-body { flex: 1 1 auto; min-width: 0; }
 </style>
 </head>
 <body>
@@ -55,20 +58,23 @@ PAGE_TEMPLATE = Template(
 <h4 style="color:#0a7;">🆕 New this week ({{ region.new_this_week|length }})</h4>
 <ul>
 {% for L in region.new_this_week %}
-  <li>
-    {% if L.keyword_boost %}⭐ {% endif %}
-    <strong>{{ L.price_label }}</strong> &mdash; {{ L.title }}
-    {% if L.location_text %}<span class="meta"> &middot; {{ L.location_text }}</span>{% endif %}
-    {% if L.location_confidence != 'exact' %}<span class="approx"> &middot; ({{ L.location_confidence }} location)</span>{% endif %}
-    <br>
-    <a href="{{ L.primary_url }}">{{ L.primary_url|truncate(80) }}</a>
-    {% if L.primary_source %}<span class="src-tag"> [{{ L.primary_source }}]</span>{% endif %}
-    {% if L.other_sources %}
-    <span class="also-at">also at:
-      {% for src, url in L.other_sources %}<a href="{{ url }}">{{ src }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
-    </span>
-    {% endif %}
-    <span class="note">first seen: {{ L.first_seen_iso }}{% if L.listed_on_iso %} &middot; listed on site: {{ L.listed_on_iso }}{% endif %}</span>
+  <li class="listing-row">
+    {% if L.photo_url %}<a href="{{ L.primary_url }}"><img class="listing-thumb" src="{{ L.photo_url }}" alt="" loading="lazy"></a>{% else %}<div class="listing-thumb"></div>{% endif %}
+    <div class="listing-body">
+      {% if L.keyword_boost %}⭐ {% endif %}
+      <strong>{{ L.price_label }}</strong> &mdash; {{ L.title }}
+      {% if L.location_text %}<span class="meta"> &middot; {{ L.location_text }}</span>{% endif %}
+      {% if L.location_confidence != 'exact' %}<span class="approx"> &middot; ({{ L.location_confidence }} location)</span>{% endif %}
+      <br>
+      <a href="{{ L.primary_url }}">{{ L.primary_url|truncate(80) }}</a>
+      {% if L.primary_source %}<span class="src-tag"> [{{ L.primary_source }}]</span>{% endif %}
+      {% if L.other_sources %}
+      <span class="also-at">also at:
+        {% for src, url in L.other_sources %}<a href="{{ url }}">{{ src }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+      </span>
+      {% endif %}
+      <span class="note">first seen: {{ L.first_seen_iso }}{% if L.listed_on_iso %} &middot; listed on site: {{ L.listed_on_iso }}{% endif %}</span>
+    </div>
   </li>
 {% endfor %}
 </ul>

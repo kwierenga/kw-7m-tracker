@@ -97,6 +97,22 @@ def _parse(html: str) -> list[RawListing]:
             tag_str = f"({lat},{lon})"
             description = f"{description} {tag_str}".strip() if description else tag_str
 
+        # Photo from preview object (per agent inspection: small/medium/large keys)
+        preview = prop.get("preview") or {}
+        photo_path = (
+            preview.get("medium")
+            or preview.get("large")
+            or preview.get("small")
+            if isinstance(preview, dict)
+            else None
+        )
+        photo_url = None
+        if isinstance(photo_path, str) and photo_path:
+            if photo_path.startswith("http"):
+                photo_url = photo_path
+            else:
+                photo_url = BASE + ("" if photo_path.startswith("/") else "/") + photo_path
+
         out.append(
             RawListing(
                 source=SOURCE,
@@ -108,6 +124,7 @@ def _parse(html: str) -> list[RawListing]:
                 description=description if isinstance(description, str) else None,
                 fetched_at=fetched_at,
                 listed_on_iso=listed_on if isinstance(listed_on, str) else None,
+                photo_url=photo_url,
             )
         )
     return out

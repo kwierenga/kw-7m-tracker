@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 from curl_cffi import requests as cf
 
 from ..models import RawListing
+from ..photos import extract_first_img
 
 SOURCE = "century21_jm"
 BASE = "https://century21jm.com"
@@ -103,6 +104,7 @@ def _parse(html: str) -> list[RawListing]:
                 description=None,
                 fetched_at=fetched_at,
                 listed_on_iso=None,
+                photo_url=extract_first_img(card, BASE),
             )
         )
     return out

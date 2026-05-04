@@ -61,6 +61,14 @@ def _parse(html: str, source_url: str, fetched_at: str) -> RawListing | None:
     if not container:
         return None
 
+    # Photo from og:image meta (most reliable for xposure)
+    og = soup.select_one('meta[property="og:image"]')
+    photo_url = og.get("content") if og else None
+    if not photo_url:
+        img = container.select_one("img")
+        if img:
+            photo_url = img.get("src")
+
     # MLS id from the listing-info table; fall back to URL param l=...
     mls_id: str | None = None
     for label_td in soup.select("td.listing-label"):
@@ -129,4 +137,5 @@ def _parse(html: str, source_url: str, fetched_at: str) -> RawListing | None:
         description=description,
         fetched_at=fetched_at,
         listed_on_iso=None,
+        photo_url=photo_url,
     )

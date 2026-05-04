@@ -20,6 +20,7 @@ class RawListing:
     description: str | None
     fetched_at: str
     listed_on_iso: str | None = None  # listing's own publication date if exposed by site
+    photo_url: str | None = None
 
     @property
     def stable_id(self) -> str:
@@ -44,5 +45,6 @@ class NormalizedListing:
     matched_regions: list[str] = field(default_factory=list)
     keyword_boost: bool = False
     listed_on_iso: str | None = None
+    photo_url: str | None = None
     first_seen_iso: str | None = None
     last_seen_iso: str | None = None

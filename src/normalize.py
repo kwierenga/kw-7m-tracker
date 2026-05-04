@@ -95,6 +95,7 @@ def normalize_one(raw: RawListing) -> NormalizedListing:
         matched_regions=matched,
         keyword_boost=boosted,
         listed_on_iso=raw.listed_on_iso,
+        photo_url=raw.photo_url,
     )
 
 

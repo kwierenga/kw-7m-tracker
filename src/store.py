@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS listings (
     matched_regions_json TEXT NOT NULL,
     keyword_boost INTEGER NOT NULL DEFAULT 0,
     listed_on_iso TEXT,
+    photo_url TEXT,
     first_seen_iso TEXT NOT NULL,
     last_seen_iso TEXT NOT NULL
 );
@@ -73,8 +74,8 @@ def upsert_listings(con: sqlite3.Connection, listings: Iterable[dict], run_iso: 
                 property_type, price_usd, price_original, price_currency,
                 lat, lon, location_text, location_confidence,
                 matched_regions_json, keyword_boost,
-                listed_on_iso, first_seen_iso, last_seen_iso
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                listed_on_iso, photo_url, first_seen_iso, last_seen_iso
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(stable_id) DO UPDATE SET
                 sources_json=excluded.sources_json,
                 urls_json=excluded.urls_json,
@@ -91,6 +92,7 @@ def upsert_listings(con: sqlite3.Connection, listings: Iterable[dict], run_iso: 
                 matched_regions_json=excluded.matched_regions_json,
                 keyword_boost=excluded.keyword_boost,
                 listed_on_iso=COALESCE(excluded.listed_on_iso, listings.listed_on_iso),
+                photo_url=COALESCE(excluded.photo_url, listings.photo_url),
                 last_seen_iso=excluded.last_seen_iso
             """,
             (
@@ -110,6 +112,7 @@ def upsert_listings(con: sqlite3.Connection, listings: Iterable[dict], run_iso: 
                 json.dumps(L.get("matched_regions", [])),
                 1 if L.get("keyword_boost") else 0,
                 L.get("listed_on_iso"),
+                L.get("photo_url"),
                 first_seen,
                 run_iso,
             ),

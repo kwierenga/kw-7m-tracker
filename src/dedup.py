@@ -45,6 +45,7 @@ def _merge(a: NormalizedListing, b: NormalizedListing) -> NormalizedListing:
         matched_regions=list(dict.fromkeys(a.matched_regions + b.matched_regions)),
         keyword_boost=a.keyword_boost or b.keyword_boost,
         listed_on_iso=listed_on,
+        photo_url=a.photo_url or b.photo_url,
     )
 
 
