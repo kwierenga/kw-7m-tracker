@@ -1,4 +1,4 @@
-"""millenniumpropertiessalesandservices.com - server-rendered featured listings."""
+"""millenniumpropertiessalesandservices.com - server-rendered listings."""
 from __future__ import annotations
 
 import re
@@ -12,26 +12,50 @@ from ..models import RawListing
 
 SOURCE = "millennium"
 BASE = "https://www.millenniumpropertiessalesandservices.com"
-URLS = [f"{BASE}/", f"{BASE}/property-search?rent_sale=sale"]
+
+
+def _build_urls() -> list[str]:
+    urls = [
+        f"{BASE}/",
+        f"{BASE}/property-search?rent_sale=sale",
+    ]
+    # Try common pagination conventions; break-on-empty handles whichever doesn't work.
+    for page in range(2, 8):
+        urls.append(f"{BASE}/property-search?rent_sale=sale&page={page}")
+    return urls
 
 
 def scrape() -> list[RawListing]:
     out: list[RawListing] = []
     seen: set[str] = set()
+    consecutive_empty_paginated = 0
     with cf.Session(impersonate="chrome131") as s:
         try:
             s.get(f"{BASE}/", allow_redirects=True, timeout=30)
         except Exception:  # noqa: BLE001
             pass
-        for url in URLS:
+        for url in _build_urls():
+            is_paginated = "page=" in url
             try:
                 r = s.get(url, allow_redirects=True, timeout=30)
                 if r.status_code != 200:
+                    if is_paginated:
+                        consecutive_empty_paginated += 1
+                        if consecutive_empty_paginated >= 2:
+                            break
                     continue
+                new_count = 0
                 for raw in _parse(r.text):
                     if raw.url not in seen:
                         seen.add(raw.url)
                         out.append(raw)
+                        new_count += 1
+                if is_paginated and new_count == 0:
+                    consecutive_empty_paginated += 1
+                    if consecutive_empty_paginated >= 2:
+                        break
+                else:
+                    consecutive_empty_paginated = 0
             except Exception:  # noqa: BLE001
                 continue
     return out
@@ -62,7 +86,6 @@ def _parse(html: str) -> list[RawListing]:
         price_el = card.select_one(".price h4") or card.select_one(".property_listing_price h4")
         price = price_el.get_text(" ", strip=True) if price_el else None
 
-        # Location is encoded in the URL slug — decode it
         location = None
         loc_match = re.search(r"/property/([^/]+)/MLS-", url)
         if loc_match:

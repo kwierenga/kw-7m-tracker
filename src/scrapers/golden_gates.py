@@ -1,4 +1,4 @@
-"""goldengatesrealtyja.com - server-rendered featured listings."""
+"""goldengatesrealtyja.com - server-rendered listings."""
 from __future__ import annotations
 
 import re
@@ -11,29 +11,49 @@ from ..models import RawListing
 
 SOURCE = "golden_gates"
 BASE = "https://www.goldengatesrealtyja.com"
-URLS = [
-    f"{BASE}/",
-    f"{BASE}/property-search?rent_sale=sale",
-]
+
+
+def _build_urls() -> list[str]:
+    urls = [
+        f"{BASE}/",
+        f"{BASE}/property-search?rent_sale=sale",
+    ]
+    for page in range(2, 8):
+        urls.append(f"{BASE}/property-search?rent_sale=sale&page={page}")
+    return urls
 
 
 def scrape() -> list[RawListing]:
     out: list[RawListing] = []
     seen: set[str] = set()
+    consecutive_empty_paginated = 0
     with cf.Session(impersonate="chrome131") as s:
         try:
             s.get(f"{BASE}/", allow_redirects=True, timeout=30)
         except Exception:  # noqa: BLE001
             pass
-        for url in URLS:
+        for url in _build_urls():
+            is_paginated = "page=" in url
             try:
                 r = s.get(url, allow_redirects=True, timeout=30)
                 if r.status_code != 200:
+                    if is_paginated:
+                        consecutive_empty_paginated += 1
+                        if consecutive_empty_paginated >= 2:
+                            break
                     continue
+                new_count = 0
                 for raw in _parse(r.text):
                     if raw.url not in seen:
                         seen.add(raw.url)
                         out.append(raw)
+                        new_count += 1
+                if is_paginated and new_count == 0:
+                    consecutive_empty_paginated += 1
+                    if consecutive_empty_paginated >= 2:
+                        break
+                else:
+                    consecutive_empty_paginated = 0
             except Exception:  # noqa: BLE001
                 continue
     return out
@@ -54,26 +74,21 @@ def _parse(html: str) -> list[RawListing]:
         m = re.search(r"/(MLS-[A-Za-z0-9]+|GGR-[A-Za-z0-9]+)/?$", url)
         source_id = m.group(1) if m else url.rstrip("/").split("/")[-1]
 
-        # Property type
         type_el = card.select_one(".bottom_texts .lefttext h3.title") or card.select_one("h3.title")
         ptype = type_el.get_text(" ", strip=True) if type_el else ""
 
-        # For sale/rent badge
         badge_el = card.select_one(".badge_wraps .forsale_badge")
         transaction = badge_el.get_text(" ", strip=True) if badge_el else ""
 
-        # Skip rentals
         if "rent" in transaction.lower() or "lease" in transaction.lower():
             continue
 
         title_parts = [p for p in (ptype, transaction.lstrip(" ")) if p]
         title = " — ".join(title_parts) if title_parts else "(untitled)"
 
-        # Location (cleanest format of the three: "St. Ann, Laughlands")
         loc_el = card.select_one(".property_listing_content h3.prop_title") or card.select_one("h3.prop_title")
         location = loc_el.get_text(" ", strip=True) if loc_el else None
 
-        # Price
         price_el = card.select_one(".bottom_texts .lefttext h4.price_text") or card.select_one("h4.price_text")
         price = price_el.get_text(" ", strip=True) if price_el else None
 

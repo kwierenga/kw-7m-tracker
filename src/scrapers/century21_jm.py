@@ -1,4 +1,4 @@
-"""century21jm.com - Century 21 Jamaica featured listings."""
+"""century21jm.com - Century 21 Jamaica listings."""
 from __future__ import annotations
 
 import re
@@ -11,26 +11,49 @@ from ..models import RawListing
 
 SOURCE = "century21_jm"
 BASE = "https://century21jm.com"
-URLS = [f"{BASE}/"]
+
+
+def _build_urls() -> list[str]:
+    urls = [f"{BASE}/"]
+    # Per agent inspection: search URL has form
+    # /search/residential-commercial/residential/rent-sale/sale/page/N/limit/12/range/H
+    base_search = "/search/residential-commercial/residential/rent-sale/sale"
+    for page in range(1, 8):
+        urls.append(f"{BASE}{base_search}/page/{page}/limit/12/range/H")
+    return urls
 
 
 def scrape() -> list[RawListing]:
     out: list[RawListing] = []
     seen: set[str] = set()
+    consecutive_empty_paginated = 0
     with cf.Session(impersonate="chrome131") as s:
         try:
             s.get(f"{BASE}/", allow_redirects=True, timeout=30)
         except Exception:  # noqa: BLE001
             pass
-        for url in URLS:
+        for url in _build_urls():
+            is_paginated = "/page/" in url
             try:
                 r = s.get(url, allow_redirects=True, timeout=30)
                 if r.status_code != 200:
+                    if is_paginated:
+                        consecutive_empty_paginated += 1
+                        if consecutive_empty_paginated >= 2:
+                            break
                     continue
+                new_count = 0
                 for raw in _parse(r.text):
                     if raw.url not in seen:
                         seen.add(raw.url)
                         out.append(raw)
+                        new_count += 1
+                if is_paginated and new_count == 0:
+                    consecutive_empty_paginated += 1
+                    if consecutive_empty_paginated >= 2:
+                        break
+                else:
+                    consecutive_empty_paginated = 0
             except Exception:  # noqa: BLE001
                 continue
     return out
@@ -50,7 +73,6 @@ def _parse(html: str) -> list[RawListing]:
             url = BASE + ("" if url.startswith("/") else "/") + url
         source_id = str(mls) if mls else url.rstrip("/").split("/")[-1]
 
-        # Transaction (For Sale / For Rent) lives in card-top first-li anchor
         trans_el = card.select_one(".card-top ul li:first-child a")
         trans_text = trans_el.get_text(" ", strip=True).lower() if trans_el else ""
         if "rent" in trans_text or "lease" in trans_text:
@@ -64,7 +86,6 @@ def _parse(html: str) -> list[RawListing]:
         )
         location = loc_el.get_text(" ", strip=True) if loc_el else None
 
-        # Price is in .info_details — last li
         price_lis = card.select(".info_details li")
         price = price_lis[-1].get_text(" ", strip=True) if price_lis else None
 
