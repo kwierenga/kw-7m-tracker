@@ -39,8 +39,10 @@ def _parse(html: str) -> list[RawListing]:
     except json.JSONDecodeError:
         return []
     page_props = data.get("props", {}).get("pageProps", {})
+    page_data = page_props.get("pageData", {}) or {}
     properties = (
-        page_props.get("properties")
+        page_data.get("properties")
+        or page_props.get("properties")
         or page_props.get("results")
         or page_props.get("items")
         or []
