@@ -46,29 +46,33 @@ def get_jmd_per_usd(client: httpx.Client | None = None) -> float:
     return rate
 
 
-_PRICE_RE = re.compile(
+_AMOUNT_RE = re.compile(
     r"""
-    (?P<currency>USD?|US\$|J\$|JMD|JA\$|\$)?     # optional leading currency
-    \s*
     (?P<amount>[\d][\d,]*(?:\.\d+)?)             # number with thousands seps
     \s*
     (?P<suffix>M|K|million|thousand)?            # magnitude
-    \s*
-    (?P<currency2>USD?|JMD|US\$|J\$|JA\$)?        # optional trailing
     """,
     re.IGNORECASE | re.VERBOSE,
 )
 
+# Currency-word detection: looked for as a substring anywhere in the price text
+# (case-insensitive) BEFORE falling back to the bare-$ heuristic. This handles
+# "USD $ 3,000,000" — earlier code would mis-classify those as JMD because the
+# regex started parsing from the $ and never saw the leading USD.
+_USD_WORDS = ("USD", "US$", "U.S.")
+_JMD_WORDS = ("JMD", "JA$", "J$")
+
 
 def parse_price(text: str) -> tuple[int | None, str]:
-    """Parse 'US$450,000' / 'J$50M' / '$1.2M USD' etc. Returns (usd_int, currency_label).
+    """Parse 'US$450,000' / 'J$50M' / 'USD $ 3,000,000' / '$1.2M JMD' etc.
+    Returns (usd_int, currency_label).
 
     currency_label is one of 'USD', 'JMD', 'unknown'. If unknown, caller should not trust.
     """
     if not text:
         return None, "unknown"
     cleaned = text.replace("\xa0", " ").strip()
-    m = _PRICE_RE.search(cleaned)
+    m = _AMOUNT_RE.search(cleaned)
     if not m:
         return None, "unknown"
     amount = float(m.group("amount").replace(",", ""))
@@ -78,18 +82,17 @@ def parse_price(text: str) -> tuple[int | None, str]:
     elif suffix in ("k", "thousand"):
         amount *= 1_000
 
-    cur_raw = (m.group("currency") or m.group("currency2") or "").upper().replace(" ", "")
-    if cur_raw in ("US$", "USD"):
+    upper = cleaned.upper()
+    if any(w in upper for w in _USD_WORDS):
         currency = "USD"
-    elif cur_raw in ("J$", "JMD", "JA$"):
+    elif any(w in upper for w in _JMD_WORDS):
         currency = "JMD"
-    elif cur_raw == "$":
-        # Bare $ is ambiguous in JA listings. Heuristic: under 10,000 likely USD/k typo,
-        # 10,000-2,000,000 likely USD, > 2,000,000 likely JMD.
-        if amount > 2_000_000:
-            currency = "JMD"
-        else:
-            currency = "USD"
+    elif "$" in cleaned:
+        # Bare $ with no currency word — last-resort heuristic. JA listings rarely
+        # quote properties below $10K USD, and amounts above ~$1M are typically JMD
+        # (a $1M+ JMD home is ~$6.4K USD). Tightened threshold from 2M to 1M to
+        # better match observed data.
+        currency = "JMD" if amount > 1_000_000 else "USD"
     else:
         currency = "unknown"
 
