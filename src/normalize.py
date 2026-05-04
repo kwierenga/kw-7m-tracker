@@ -98,5 +98,22 @@ def normalize_one(raw: RawListing) -> NormalizedListing:
     )
 
 
+RENT_PHRASES = (
+    " for rent",
+    "for-rent",
+    " for lease",
+    "rental property",
+    "/month",
+    " per month",
+    " pcm",
+    "monthly rent",
+)
+
+
+def _looks_like_rental(raw: RawListing) -> bool:
+    text = " ".join(filter(None, [raw.title, raw.raw_location, raw.description, raw.raw_price])).lower()
+    return any(p in text for p in RENT_PHRASES)
+
+
 def normalize_all(raws: list[RawListing]) -> list[NormalizedListing]:
-    return [normalize_one(r) for r in raws]
+    return [normalize_one(r) for r in raws if not _looks_like_rental(r)]

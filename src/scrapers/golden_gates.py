@@ -21,6 +21,10 @@ def scrape() -> list[RawListing]:
     out: list[RawListing] = []
     seen: set[str] = set()
     with cf.Session(impersonate="chrome131") as s:
+        try:
+            s.get(f"{BASE}/", allow_redirects=True, timeout=30)
+        except Exception:  # noqa: BLE001
+            pass
         for url in URLS:
             try:
                 r = s.get(url, allow_redirects=True, timeout=30)
@@ -57,6 +61,10 @@ def _parse(html: str) -> list[RawListing]:
         # For sale/rent badge
         badge_el = card.select_one(".badge_wraps .forsale_badge")
         transaction = badge_el.get_text(" ", strip=True) if badge_el else ""
+
+        # Skip rentals
+        if "rent" in transaction.lower() or "lease" in transaction.lower():
+            continue
 
         title_parts = [p for p in (ptype, transaction.lstrip(" ")) if p]
         title = " — ".join(title_parts) if title_parts else "(untitled)"

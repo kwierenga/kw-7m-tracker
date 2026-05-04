@@ -19,6 +19,10 @@ def scrape() -> list[RawListing]:
     out: list[RawListing] = []
     seen: set[str] = set()
     with cf.Session(impersonate="chrome131") as s:
+        try:
+            s.get(f"{BASE}/", allow_redirects=True, timeout=30)
+        except Exception:  # noqa: BLE001
+            pass
         for url in URLS:
             try:
                 r = s.get(url, allow_redirects=True, timeout=30)
@@ -50,6 +54,10 @@ def _parse(html: str) -> list[RawListing]:
 
         title_el = card.select_one(".prop_type_mls_row h4") or card.select_one(".property_listing_content h4")
         title_text = title_el.get_text(" ", strip=True) if title_el else ""
+
+        # Skip rentals — Klaas is buying, not renting
+        if "rent" in title_text.lower() or "lease" in title_text.lower():
+            continue
 
         price_el = card.select_one(".price h4") or card.select_one(".property_listing_price h4")
         price = price_el.get_text(" ", strip=True) if price_el else None

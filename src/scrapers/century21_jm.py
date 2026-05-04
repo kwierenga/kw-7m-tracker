@@ -18,6 +18,10 @@ def scrape() -> list[RawListing]:
     out: list[RawListing] = []
     seen: set[str] = set()
     with cf.Session(impersonate="chrome131") as s:
+        try:
+            s.get(f"{BASE}/", allow_redirects=True, timeout=30)
+        except Exception:  # noqa: BLE001
+            pass
         for url in URLS:
             try:
                 r = s.get(url, allow_redirects=True, timeout=30)
@@ -45,6 +49,12 @@ def _parse(html: str) -> list[RawListing]:
         if not url.startswith("http"):
             url = BASE + ("" if url.startswith("/") else "/") + url
         source_id = str(mls) if mls else url.rstrip("/").split("/")[-1]
+
+        # Transaction (For Sale / For Rent) lives in card-top first-li anchor
+        trans_el = card.select_one(".card-top ul li:first-child a")
+        trans_text = trans_el.get_text(" ", strip=True).lower() if trans_el else ""
+        if "rent" in trans_text or "lease" in trans_text:
+            continue
 
         type_el = card.select_one(".card-top ul li:first-child strong")
         ptype = type_el.get_text(" ", strip=True) if type_el else ""
