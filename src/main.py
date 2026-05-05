@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json as _json
 import sys
 from dataclasses import asdict
 from datetime import datetime, timezone
@@ -36,15 +37,18 @@ def run(dry_run: bool) -> int:
 
     raws = []
     sources_active: list[str] = []
+    sources_counts: dict[str, int] = {}
     for name, fn in scrapers.ALL_SCRAPERS:
         try:
             got = fn()
             print(f"[scrape] {name}: {len(got)} raw")
             raws.extend(got)
             sources_active.append(name)
+            sources_counts[name] = len(got)
         except Exception as e:  # noqa: BLE001
             print(f"[scrape] {name}: FAILED {type(e).__name__}: {e}")
             notes_lines.append(f"{name} failed: {type(e).__name__}: {e}")
+            sources_counts[name] = -1  # sentinel: source did not run cleanly this cycle
 
     norms = normalize_all(raws)
     print(f"[normalize] {len(norms)} normalized")
@@ -63,18 +67,58 @@ def run(dry_run: bool) -> int:
         print(f"[store] inserted={n_new_inserted} updated={n_updated}")
 
         seen = listings_seen_in_run(con, run_iso)
-        dropped = listings_dropped_in_run(con, run_iso) if prev_run else []
+        # Bug fix: only flag as dropped when ALL of a listing's sources scraped
+        # successfully this run. Otherwise a transient failure spawns phantom
+        # 'dropped' listings — and amplifies under daily cadence.
+        dropped = (
+            listings_dropped_in_run(con, run_iso, sources_active=sources_active)
+            if prev_run else []
+        )
         buckets = classify(seen, dropped, run_iso, prev_run)
-        print(f"[diff] new={len(buckets.new_this_week)} active={len(buckets.still_active)} dropped={len(buckets.dropped_off)}")
+        print(
+            f"[diff] new={len(buckets.new_since_last_run)} "
+            f"active={len(buckets.still_active)} "
+            f"dropped={len(buckets.dropped_off)}"
+        )
 
-        write_run_log(con, run_iso, len(raws), len(merged), len(buckets.new_this_week), len(buckets.dropped_off), "; ".join(notes_lines))
+        write_run_log(
+            con,
+            run_iso,
+            len(raws),
+            len(merged),
+            len(buckets.new_since_last_run),
+            len(buckets.dropped_off),
+            "; ".join(notes_lines),
+            sources_counts=sources_counts,
+        )
 
-    subject, html = build_digest(buckets, fx_rate=fx, sources=sources_active, run_iso=run_iso, notes="; ".join(notes_lines))
+    subject, html = build_digest(
+        buckets,
+        fx_rate=fx,
+        sources=sources_active,
+        run_iso=run_iso,
+        notes="; ".join(notes_lines),
+        sources_counts=sources_counts,
+    )
     print(f"[digest] {subject}")
 
-    out_preview = Path(__file__).resolve().parent.parent / "data" / "last_digest.html"
+    root = Path(__file__).resolve().parent.parent
+    out_preview = root / "data" / "last_digest.html"
     out_preview.write_text(html, encoding="utf-8")
     print(f"[digest] preview: {out_preview}")
+
+    # Status JSON consumed by the workflow to decide whether to commit.
+    status = {
+        "run_iso": run_iso,
+        "new": len(buckets.new_since_last_run),
+        "dropped": len(buckets.dropped_off),
+        "active": len(buckets.still_active),
+        "sources_counts": sources_counts,
+    }
+    (root / "data" / "last_run_status.json").write_text(
+        _json.dumps(status, indent=2), encoding="utf-8"
+    )
+    print(f"[status] new={status['new']} dropped={status['dropped']} active={status['active']}")
 
     if dry_run:
         print("[digest] DRY RUN — not writing to docs/")

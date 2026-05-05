@@ -1,10 +1,14 @@
-"""Decide which listings count as 'new this week', 'still active', 'dropped off'.
+"""Decide which listings count as 'new since last run', 'still active', 'dropped off'.
 
-Definition of 'new this week':
+Definition of 'new since last run':
   EITHER (preferred) the listing's own published date is within the last 7 days
                      AND we did not see it in our previous run,
   OR (fallback when no published date is exposed by the site)
                      this is the first run that observed the listing.
+
+The 7-day published-date tolerance is intentionally wider than the daily run
+cadence: sites publish 'new' listings with stale-by-a-few-days posted dates,
+and we don't want to miss those just because we now scrape every day.
 """
 from __future__ import annotations
 
@@ -15,7 +19,7 @@ from datetime import datetime, timedelta, timezone
 
 @dataclass
 class DiffBuckets:
-    new_this_week: list[dict]
+    new_since_last_run: list[dict]
     still_active: list[dict]
     dropped_off: list[dict]
 
@@ -58,7 +62,7 @@ def classify(seen_this_run: list[dict], dropped_rows: list[dict], run_iso: str, 
             new.append(row)
         else:
             active.append(row)
-    return DiffBuckets(new_this_week=new, still_active=active, dropped_off=list(dropped_rows))
+    return DiffBuckets(new_since_last_run=new, still_active=active, dropped_off=list(dropped_rows))
 
 
 def regions_for(row: dict) -> list[str]:

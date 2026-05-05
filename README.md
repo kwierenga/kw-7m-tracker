@@ -1,39 +1,49 @@
 # kw-7m-tracker
 
-Weekly property-listings tracker for the Upton Estate Golf & Country Club area in Jamaica. Scrapes 7 sources, dedups, filters by 7-mile radius + budget, publishes a digest to GitHub Pages.
+Daily property-listings tracker for the Upton Estate Golf & Country Club area in Jamaica plus several other north-coast spots. Scrapes 7 sources, dedups, filters by 7-mile radius + budget, publishes a digest to GitHub Pages.
 
 **Live page:** https://kwierenga.github.io/kw-7m-tracker/
 
 ## Why this exists
 
-Jamaican real-estate sites rarely take down sold listings, so old postings clutter results. The whole point of this tracker is **detecting fresh listings** — properties that weren't in last week's run AND (where the site exposes a listed-on date) were published within the last 7 days. Dedup is a digest-cleanliness feature, not the main signal.
+Jamaican real-estate sites rarely take down sold listings, so old postings clutter results. The whole point of this tracker is **detecting fresh listings** — properties that weren't in the previous run AND (where the site exposes a listed-on date) were published within the last 7 days. Dedup is a digest-cleanliness feature, not the main signal.
 
 ## Search parameters
 
 Configured in [`src/regions.py`](src/regions.py):
 
-- **Center:** Upton Estate Golf & Country Club clubhouse — `18.38427930703869, -77.06401634785209`
-- **Radius:** 7 miles
-- **Budget:** homes ≤ $800K USD, land ≤ $350K USD
-- **Boost keywords:** "upton estate", "upton", "sandals golf", "sandals", "golf course", "country club"
+- **Regions tracked:**
+  - Upton Estate Golf & Country Club (Ocho Rios area, the canonical center)
+  - Duncans (Trelawny)
+  - Discovery Bay
+  - Runaway Bay / Cardiff Hall
+  - Mammee Bay
+  - Port Antonio (Portland)
+- **Radius:** 7 miles per region
+- **Budget:** homes ≤ $800K USD, land ≤ $350K USD (per region)
+- **Boost keywords** per region — see `boost_keywords` in `REGIONS`
 
-Multi-region is built in — adding another spot in Jamaica is a one-line entry in `REGIONS`.
+A listing matches if it falls inside any region's geo radius (or is keyword-boosted into it when geocoding is poor) AND its price is under that region's cap.
 
 ## Architecture
 
 ```
-GitHub Actions cron (Sundays 13:00 UTC)
+GitHub Actions cron (daily 13:00 UTC = 8 AM Jamaica)
    │
    ├─► curl_cffi scrapers (chrome131 TLS fingerprint) ──► RawListing[]
    │
    ├─► Normalize: geocode, JMD→USD via daily FX, dedup, region-match, keyword boost
    │
-   ├─► SQLite (data/listings.db, committed weekly — git is the history)
+   ├─► SQLite (data/listings.db, committed when listings change — git is the history)
    │
-   ├─► Diff: classify each listing as new-this-week / still-active / dropped-off
+   ├─► Diff: classify each listing as new-since-last-run / still-active / dropped-off
+   │   (a listing only counts as 'dropped' when ALL of its sources scraped successfully —
+   │    avoids phantom drops on transient scraper failures)
    │
-   └─► Render docs/index.html + docs/archive/<date>.html → GitHub Pages
-       Notification: GitHub commit emails (no SendGrid/SMTP needed)
+   ├─► Render docs/index.html + docs/archive/<date>.html → GitHub Pages
+   │
+   └─► Commit only when there is at least one new or dropped listing.
+       Silent days produce no commit and no GitHub email.
 ```
 
 ## Sources scraped
@@ -74,21 +84,21 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m src.main
 ```
 
-The GitHub Actions workflow does the same thing every Sunday and commits the result.
+The GitHub Actions workflow does the same thing every day at 13:00 UTC and commits the result — but only on days where there is at least one new or dropped listing, so you don't get a stream of empty-day emails.
 
 ## Layout
 
 ```
 src/
-  regions.py        Multi-region config (currently just Upton)
+  regions.py        Multi-region config (Upton + 5 north-coast spots)
   models.py         RawListing + NormalizedListing
   dates.py          Jamaica dd/mm/yyyy-aware date parser
   geo.py            Haversine + parish/town centroids
   fx.py             Daily JMD/USD via open.er-api.com (cached per-day)
-  store.py          SQLite + upsert + first-seen / last-seen tracking
+  store.py          SQLite + upsert + first-seen / last-seen tracking + run_log
   normalize.py      Geocode + price + type-infer + region-match + rental filter
   dedup.py          Merge close-by + close-priced listings across sources
-  diff.py           Classify new / active / dropped-off
+  diff.py           Classify new-since-last-run / active / dropped-off
   digest.py         Jinja HTML render + write_static_site to docs/
   photos.py         First-image extraction helper for scrapers
   scrapers/
@@ -109,18 +119,20 @@ tests/
   fixtures/         Saved HTML (Mapbox tokens redacted)
 
 data/
-  listings.db       SQLite (committed weekly)
-  fx_cache.json     Daily FX rates (committed)
-  last_digest.html  Local preview (committed)
-  inspect/          Raw scraped HTML for parser dev (gitignored)
-  xposure_urls.txt  Manual-ingest URLs for xposure listings
+  listings.db            SQLite (committed when listings change)
+  fx_cache.json          Daily FX rates (committed)
+  last_digest.html       Local preview (committed)
+  last_run_status.json   Most recent run summary, consumed by the workflow to
+                         decide whether to commit (committed)
+  inspect/               Raw scraped HTML for parser dev (gitignored)
+  xposure_urls.txt       Manual-ingest URLs for xposure listings
 
 docs/
   index.html        Latest digest (served via GitHub Pages)
-  archive/          Dated snapshots of past weekly runs
+  archive/          Dated snapshots of past daily runs
 
 .github/workflows/
-  weekly.yml        Sunday cron + manual trigger
+  daily.yml         Daily cron + manual trigger; commit-only-when-changed
 ```
 
 ## Important conventions
@@ -145,6 +157,14 @@ Klaas is buying, not renting. Rentals are dropped at two layers:
 
 When dedup merges listings from multiple sources, the digest shows the **most reputable** source's URL prominently and others as a smaller "also at" line. Source ranking is in `SOURCE_RANK` in [`src/digest.py`](src/digest.py).
 
+### "Dropped off" never fires for a flaky source
+
+`store.listings_dropped_in_run` only flags a listing as dropped if **all of its sources successfully scraped this run**. If any source the listing depends on failed or didn't run, the listing is held in 'still active' rather than reported as dropped. Otherwise a single transient cb_jamaica 503 would fire dozens of false drop alerts every day.
+
+### Per-source counts in every digest
+
+The footer of every digest lists how many cards each scraper returned this run, with failed sources marked `FAILED` in red. Day-over-day comparisons in `data/last_run_status.json` (and the `run_log` table inside `listings.db`) make scraper rot visible quickly.
+
 ### Mapbox token gotcha for fixtures
 
 When committing saved HTML as test fixtures, GitHub push protection blocks the push because Jamaican real-estate sites embed **Mapbox public tokens** in their HTML for map widgets. Strip them before committing fixtures with a regex like `(?:pk|sk)\.[A-Za-z0-9_.\-]{40,}` → `REDACTED_TOKEN`.
@@ -162,8 +182,9 @@ When committing saved HTML as test fixtures, GitHub push protection blocks the p
 ## Outstanding work
 
 - Fix Century 21 JM pagination URL pattern (currently capped at home page, ~5 cards)
+- Persist a canonical cross-source listing identity (bug #1B): even with the dropped-off fix above, a listing's surviving stable_id can flip between runs if its primary source flakes — mitigation handled, root cause is on the list
 - Inter-request cooldown to avoid the transient rate-limit 0-returns we see during rapid iteration
-- Detail-page fetching for accurate listed-on dates (biggest accuracy gain for "new this week")
-- Map view (Leaflet + OpenStreetMap) showing each listing relative to the golf course
-- Price-drop tracking week-over-week
+- Detail-page fetching for accurate listed-on dates (biggest accuracy gain for "new since last run")
+- Map view (Leaflet + OpenStreetMap) showing each listing relative to the regions
+- Price-drop tracking day-over-day
 - Manual paste-in ingest for Facebook Marketplace listings (same pattern as xposure_urls.txt)

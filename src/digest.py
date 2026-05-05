@@ -34,6 +34,7 @@ PAGE_TEMPLATE = Template(
   .pill-new { background: #d6f5e3; color: #086c3a; padding: 1px 6px; border-radius: 8px; font-size: 80%; }
   .topnav { color: #888; font-size: 90%; }
   .src-tag { color: #666; font-size: 85%; }
+  .src-fail { color: #c44; font-weight: 600; }
   .also-at { color: #888; font-size: 80%; margin-left: 1.5em; display: block; }
   .also-at a { color: #888; }
   .listing-row { display: flex; gap: 12px; align-items: flex-start; }
@@ -45,7 +46,7 @@ PAGE_TEMPLATE = Template(
 <p class="topnav">
   <a href="archive/">📚 archive</a>
 </p>
-<h2>Jamaica property watch — week of {{ week_label }}</h2>
+<h2>Jamaica property watch — {{ date_label }}</h2>
 <p class="meta">
   {{ summary_line }}<br>
   FX rate used: 1 USD = {{ fx_rate }} JMD.
@@ -54,10 +55,10 @@ PAGE_TEMPLATE = Template(
 {% for region in regions %}
 <h3>{{ region.name }}</h3>
 
-{% if region.new_this_week %}
-<h4 style="color:#0a7;">🆕 New this week ({{ region.new_this_week|length }})</h4>
+{% if region.new_since_last_run %}
+<h4 style="color:#0a7;">🆕 New since last run ({{ region.new_since_last_run|length }})</h4>
 <ul>
-{% for L in region.new_this_week %}
+{% for L in region.new_since_last_run %}
   <li class="listing-row">
     {% if L.photo_url %}<a href="{{ L.primary_url }}"><img class="listing-thumb" src="{{ L.photo_url }}" alt="" loading="lazy"></a>{% else %}<div class="listing-thumb"></div>{% endif %}
     <div class="listing-body">
@@ -79,7 +80,7 @@ PAGE_TEMPLATE = Template(
 {% endfor %}
 </ul>
 {% else %}
-<p><em>No new listings this week.</em></p>
+<p><em>No new listings since last run.</em></p>
 {% endif %}
 
 {% if region.still_active %}
@@ -111,7 +112,12 @@ PAGE_TEMPLATE = Template(
 
 <hr>
 <p class="note">
-  Generated {{ run_iso }}. Sources scraped this run: {{ sources_label }}.
+  Generated {{ run_iso }}.
+  {% if sources_counts %}
+  Per-source counts: {% for name, count in sources_counts.items() %}{% if count < 0 %}<span class="src-fail">{{ name }}=FAILED</span>{% else %}{{ name }}={{ count }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}.
+  {% else %}
+  Sources scraped this run: {{ sources_label }}.
+  {% endif %}
   {% if notes %}<br>Notes: {{ notes }}{% endif %}
 </p>
 </body>
@@ -189,11 +195,18 @@ def _row_to_view(row: dict) -> dict:
     return out
 
 
-def build_digest(buckets: DiffBuckets, fx_rate: float, sources: list[str], run_iso: str, notes: str = "") -> tuple[str, str]:
+def build_digest(
+    buckets: DiffBuckets,
+    fx_rate: float,
+    sources: list[str],
+    run_iso: str,
+    notes: str = "",
+    sources_counts: dict[str, int] | None = None,
+) -> tuple[str, str]:
     """Returns (page_title, html)."""
     by_region: dict[str, dict] = {}
     for r in REGIONS:
-        by_region[r.slug] = {"name": r.name, "new_this_week": [], "still_active": [], "dropped_off": []}
+        by_region[r.slug] = {"name": r.name, "new_since_last_run": [], "still_active": [], "dropped_off": []}
 
     def assign(rows: list[dict], key: str) -> None:
         for row in rows:
@@ -202,30 +215,31 @@ def build_digest(buckets: DiffBuckets, fx_rate: float, sources: list[str], run_i
             for slug in slugs:
                 bucket = by_region.setdefault(
                     slug,
-                    {"name": (by_slug(slug).name if by_slug(slug) else slug), "new_this_week": [], "still_active": [], "dropped_off": []},
+                    {"name": (by_slug(slug).name if by_slug(slug) else slug), "new_since_last_run": [], "still_active": [], "dropped_off": []},
                 )
                 bucket[key].append(view)
 
-    assign(buckets.new_this_week, "new_this_week")
+    assign(buckets.new_since_last_run, "new_since_last_run")
     assign(buckets.still_active, "still_active")
     assign(buckets.dropped_off, "dropped_off")
 
     region_views = list(by_region.values())
-    total_new = sum(len(v["new_this_week"]) for v in region_views)
+    total_new = sum(len(v["new_since_last_run"]) for v in region_views)
     total_active = sum(len(v["still_active"]) for v in region_views)
     total_dropped = sum(len(v["dropped_off"]) for v in region_views)
 
-    week_label = date.today().isoformat()
-    per_region_new = ", ".join(f"{v['name']}: {len(v['new_this_week'])}" for v in region_views if v["new_this_week"])
-    subject = f"Jamaica property watch — week of {week_label} — {total_new} new" + (f" ({per_region_new})" if per_region_new else "")
-    summary_line = f"{total_new} new this week, {total_active} still active, {total_dropped} dropped off."
+    date_label = date.today().isoformat()
+    per_region_new = ", ".join(f"{v['name']}: {len(v['new_since_last_run'])}" for v in region_views if v["new_since_last_run"])
+    subject = f"Jamaica property watch — {date_label} — {total_new} new" + (f" ({per_region_new})" if per_region_new else "")
+    summary_line = f"{total_new} new since last run, {total_active} still active, {total_dropped} dropped off."
     html = PAGE_TEMPLATE.render(
         subject=subject,
-        week_label=week_label,
+        date_label=date_label,
         summary_line=summary_line,
         fx_rate=f"{fx_rate:.2f}",
         regions=region_views,
         sources_label=", ".join(sources) or "(none)",
+        sources_counts=sources_counts or {},
         notes=notes,
         run_iso=run_iso,
     )

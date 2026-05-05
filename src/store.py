@@ -40,9 +40,18 @@ CREATE TABLE IF NOT EXISTS run_log (
     n_normalized INTEGER,
     n_new INTEGER,
     n_dropped INTEGER,
-    notes TEXT
+    notes TEXT,
+    sources_json TEXT
 );
 """
+
+
+def _migrate(con: sqlite3.Connection) -> None:
+    """Idempotent column adds for older DBs committed before the column existed."""
+    cur = con.execute("PRAGMA table_info(run_log)")
+    cols = {r[1] for r in cur.fetchall()}
+    if "sources_json" not in cols:
+        con.execute("ALTER TABLE run_log ADD COLUMN sources_json TEXT")
 
 
 @contextmanager
@@ -52,6 +61,7 @@ def connect(path: Path = DB_PATH) -> Iterator[sqlite3.Connection]:
     con.row_factory = sqlite3.Row
     try:
         con.executescript(SCHEMA)
+        _migrate(con)
         yield con
         con.commit()
     finally:
@@ -132,8 +142,19 @@ def listings_first_seen_in_run(con: sqlite3.Connection, run_iso: str) -> list[di
     return [dict(r) for r in con.execute("SELECT * FROM listings WHERE first_seen_iso = ?", (run_iso,))]
 
 
-def listings_dropped_in_run(con: sqlite3.Connection, run_iso: str) -> list[dict]:
-    """Listings present last run but not in this run."""
+def listings_dropped_in_run(
+    con: sqlite3.Connection,
+    run_iso: str,
+    sources_active: list[str] | None = None,
+) -> list[dict]:
+    """Listings present last run but not in this run.
+
+    If sources_active is provided, exclude listings whose source set includes
+    any source that did not successfully scrape this run. Bias toward silence
+    rather than false 'dropped' alerts when a source flakes — under daily
+    cadence transient failures are common and would otherwise spawn phantom
+    drop events every time.
+    """
     rows = con.execute(
         """
         SELECT * FROM listings
@@ -142,11 +163,44 @@ def listings_dropped_in_run(con: sqlite3.Connection, run_iso: str) -> list[dict]
         """,
         (run_iso, run_iso),
     ).fetchall()
-    return [dict(r) for r in rows]
+    out = [dict(r) for r in rows]
+    if sources_active is None:
+        return out
+    active = set(sources_active)
+    confirmed: list[dict] = []
+    for r in out:
+        try:
+            srcs = json.loads(r.get("sources_json") or "[]")
+        except json.JSONDecodeError:
+            srcs = []
+        if srcs and all(s in active for s in srcs):
+            confirmed.append(r)
+    return confirmed
 
 
-def write_run_log(con: sqlite3.Connection, run_iso: str, n_scraped: int, n_normalized: int, n_new: int, n_dropped: int, notes: str = "") -> None:
+def write_run_log(
+    con: sqlite3.Connection,
+    run_iso: str,
+    n_scraped: int,
+    n_normalized: int,
+    n_new: int,
+    n_dropped: int,
+    notes: str = "",
+    sources_counts: dict[str, int] | None = None,
+) -> None:
     con.execute(
-        "INSERT OR REPLACE INTO run_log VALUES (?,?,?,?,?,?)",
-        (run_iso, n_scraped, n_normalized, n_new, n_dropped, notes),
+        """
+        INSERT OR REPLACE INTO run_log
+        (run_iso, n_scraped, n_normalized, n_new, n_dropped, notes, sources_json)
+        VALUES (?,?,?,?,?,?,?)
+        """,
+        (
+            run_iso,
+            n_scraped,
+            n_normalized,
+            n_new,
+            n_dropped,
+            notes,
+            json.dumps(sources_counts or {}),
+        ),
     )
