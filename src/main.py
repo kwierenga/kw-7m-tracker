@@ -9,7 +9,7 @@ from pathlib import Path
 
 from . import scrapers
 from .dedup import dedup
-from .diff import classify
+from .diff import classify, regions_for
 from .digest import build_digest, write_static_site
 from .fx import get_jmd_per_usd
 from .normalize import normalize_all
@@ -107,18 +107,53 @@ def run(dry_run: bool) -> int:
     out_preview.write_text(html, encoding="utf-8")
     print(f"[digest] preview: {out_preview}")
 
-    # Status JSON consumed by the workflow to decide whether to commit.
+    # Per-region breakdown for the commit subject + day-over-day visibility.
+    def _per_region(rows: list[dict]) -> dict[str, int]:
+        out: dict[str, int] = {}
+        for row in rows:
+            for slug in regions_for(row) or ["upton"]:
+                out[slug] = out.get(slug, 0) + 1
+        return out
+
+    new_by_region = _per_region(buckets.new_since_last_run)
+    dropped_by_region = _per_region(buckets.dropped_off)
+
+    def _segment(per_region: dict[str, int], label: str) -> str | None:
+        total = sum(per_region.values())
+        if total == 0:
+            return None
+        if len(per_region) == 1:
+            slug, n = next(iter(per_region.items()))
+            return f"{n} {label} in {slug}"
+        parts = ", ".join(
+            f"{slug}: {n}"
+            for slug, n in sorted(per_region.items(), key=lambda kv: -kv[1])
+        )
+        return f"{total} {label} ({parts})"
+
+    segments = [
+        s for s in (_segment(new_by_region, "new"), _segment(dropped_by_region, "dropped"))
+        if s
+    ]
+    commit_subject = f"daily run {run_iso[:10]}"
+    if segments:
+        commit_subject += " — " + ", ".join(segments)
+
+    # Status JSON consumed by the workflow to decide whether (and how) to commit.
     status = {
         "run_iso": run_iso,
         "new": len(buckets.new_since_last_run),
         "dropped": len(buckets.dropped_off),
         "active": len(buckets.still_active),
+        "new_by_region": new_by_region,
+        "dropped_by_region": dropped_by_region,
         "sources_counts": sources_counts,
+        "commit_subject": commit_subject,
     }
     (root / "data" / "last_run_status.json").write_text(
         _json.dumps(status, indent=2), encoding="utf-8"
     )
-    print(f"[status] new={status['new']} dropped={status['dropped']} active={status['active']}")
+    print(f"[status] {commit_subject}")
 
     if dry_run:
         print("[digest] DRY RUN — not writing to docs/")

@@ -40,10 +40,11 @@ jobs:
             echo "no new or dropped listings — skipping commit to avoid email churn"
             exit 0
           fi
+          subject=$(python -c "import json; print(json.load(open('data/last_run_status.json'))['commit_subject'])")
           git config user.name "property-watch-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/listings.db data/fx_cache.json data/last_digest.html data/last_run_status.json docs/
           if ! git diff --staged --quiet; then
-            git commit -m "daily run $(date -u +%Y-%m-%d) — $delta change(s)"
+            git commit -m "$subject"
             git push
           fi
