@@ -40,6 +40,7 @@ PAGE_TEMPLATE = Template(
   .listing-row { display: flex; gap: 12px; align-items: flex-start; }
   .listing-thumb { flex: 0 0 auto; width: 120px; height: 90px; object-fit: cover; border-radius: 4px; background: #eee; }
   .listing-body { flex: 1 1 auto; min-width: 0; }
+  .stale-summary { color: #888; }
 </style>
 </head>
 <body>
@@ -92,6 +93,20 @@ PAGE_TEMPLATE = Template(
     {% if L.primary_source %}<span class="src-tag"> [{{ L.primary_source }}]</span>{% endif %}
     {% if L.other_sources %}<span class="src-tag"> + {{ L.other_sources|length }} other</span>{% endif %}
     &middot; <span class="note">first seen {{ L.first_seen_iso }}</span>
+  </li>
+{% endfor %}
+</ul>
+</details>
+{% endif %}
+
+{% if region.stale %}
+<details class="stale-summary"><summary>🕸 Stale (90+ days on market) ({{ region.stale|length }})</summary>
+<ul>
+{% for L in region.stale %}
+  <li>{{ L.price_label }} &mdash; {{ L.title }} &middot;
+    <a href="{{ L.primary_url }}">link</a>
+    {% if L.primary_source %}<span class="src-tag"> [{{ L.primary_source }}]</span>{% endif %}
+    &middot; <span class="note">first seen {{ L.first_seen_iso }}{% if L.listed_on_iso %} &middot; listed on site {{ L.listed_on_iso }}{% endif %}</span>
   </li>
 {% endfor %}
 </ul>
@@ -195,6 +210,16 @@ def _row_to_view(row: dict) -> dict:
     return out
 
 
+def _empty_region_buckets(name: str) -> dict:
+    return {
+        "name": name,
+        "new_since_last_run": [],
+        "still_active": [],
+        "stale": [],
+        "dropped_off": [],
+    }
+
+
 def build_digest(
     buckets: DiffBuckets,
     fx_rate: float,
@@ -206,7 +231,7 @@ def build_digest(
     """Returns (page_title, html)."""
     by_region: dict[str, dict] = {}
     for r in REGIONS:
-        by_region[r.slug] = {"name": r.name, "new_since_last_run": [], "still_active": [], "dropped_off": []}
+        by_region[r.slug] = _empty_region_buckets(r.name)
 
     def assign(rows: list[dict], key: str) -> None:
         for row in rows:
@@ -215,23 +240,30 @@ def build_digest(
             for slug in slugs:
                 bucket = by_region.setdefault(
                     slug,
-                    {"name": (by_slug(slug).name if by_slug(slug) else slug), "new_since_last_run": [], "still_active": [], "dropped_off": []},
+                    _empty_region_buckets(by_slug(slug).name if by_slug(slug) else slug),
                 )
                 bucket[key].append(view)
 
     assign(buckets.new_since_last_run, "new_since_last_run")
     assign(buckets.still_active, "still_active")
+    assign(buckets.stale, "stale")
     assign(buckets.dropped_off, "dropped_off")
 
     region_views = list(by_region.values())
     total_new = sum(len(v["new_since_last_run"]) for v in region_views)
     total_active = sum(len(v["still_active"]) for v in region_views)
+    total_stale = sum(len(v["stale"]) for v in region_views)
     total_dropped = sum(len(v["dropped_off"]) for v in region_views)
 
     date_label = date.today().isoformat()
     per_region_new = ", ".join(f"{v['name']}: {len(v['new_since_last_run'])}" for v in region_views if v["new_since_last_run"])
     subject = f"Jamaica property watch — {date_label} — {total_new} new" + (f" ({per_region_new})" if per_region_new else "")
-    summary_line = f"{total_new} new since last run, {total_active} still active, {total_dropped} dropped off."
+    summary_line = (
+        f"{total_new} new since last run, "
+        f"{total_active} still active, "
+        f"{total_stale} stale, "
+        f"{total_dropped} dropped off."
+    )
     html = PAGE_TEMPLATE.render(
         subject=subject,
         date_label=date_label,

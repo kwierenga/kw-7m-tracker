@@ -78,6 +78,7 @@ def run(dry_run: bool) -> int:
         print(
             f"[diff] new={len(buckets.new_since_last_run)} "
             f"active={len(buckets.still_active)} "
+            f"stale={len(buckets.stale)} "
             f"dropped={len(buckets.dropped_off)}"
         )
 
@@ -145,6 +146,7 @@ def run(dry_run: bool) -> int:
         "new": len(buckets.new_since_last_run),
         "dropped": len(buckets.dropped_off),
         "active": len(buckets.still_active),
+        "stale": len(buckets.stale),
         "new_by_region": new_by_region,
         "dropped_by_region": dropped_by_region,
         "sources_counts": sources_counts,
