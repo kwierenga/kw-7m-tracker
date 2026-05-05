@@ -9,6 +9,17 @@ from jinja2 import Template
 from .diff import DiffBuckets, regions_for
 from .regions import REGIONS, by_slug
 
+# Each region is really three searches: Homes (higher budget), Land (lower
+# budget), and listings whose property_type couldn't be determined. Render
+# them as separate sub-sections so the per-search status (new/active/stale/
+# dropped) is visible at a glance.
+PROPERTY_TYPE_ORDER = ("home", "land", "unknown")
+PROPERTY_TYPE_LABELS = {
+    "home": "🏠 Homes",
+    "land": "🌿 Land",
+    "unknown": "❓ Type unclear",
+}
+
 PAGE_TEMPLATE = Template(
     """\
 <!doctype html>
@@ -22,7 +33,10 @@ PAGE_TEMPLATE = Template(
   body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 760px; margin: 2em auto; padding: 0 1em; color: #222; }
   h2 { margin-bottom: 0.2em; }
   h3 { margin-top: 1.6em; border-bottom: 1px solid #eee; padding-bottom: 0.2em; }
-  h4 { margin-bottom: 0.4em; }
+  h4 { margin-bottom: 0.4em; margin-top: 1.2em; }
+  h5 { margin-bottom: 0.3em; margin-top: 0.8em; color: #444; }
+  .section-header { color: #333; }
+  .section-budget { color: #888; font-weight: normal; font-size: 85%; margin-left: 0.4em; }
   ul { padding-left: 1.2em; }
   li { margin-bottom: 0.6em; line-height: 1.4; }
   .meta { color: #666; font-size: 90%; }
@@ -56,10 +70,13 @@ PAGE_TEMPLATE = Template(
 {% for region in regions %}
 <h3>{{ region.name }}</h3>
 
-{% if region.new_since_last_run %}
-<h4 style="color:#0a7;">🆕 New since last run ({{ region.new_since_last_run|length }})</h4>
+{% for section in region.visible_sections %}
+<h4 class="section-header">{{ section.label }}{% if section.budget_label %}<span class="section-budget">({{ section.budget_label }})</span>{% endif %}</h4>
+
+{% if section.new_since_last_run %}
+<h5 style="color:#0a7;">🆕 New since last run ({{ section.new_since_last_run|length }})</h5>
 <ul>
-{% for L in region.new_since_last_run %}
+{% for L in section.new_since_last_run %}
   <li class="listing-row">
     {% if L.photo_url %}<a href="{{ L.primary_url }}"><img class="listing-thumb" src="{{ L.photo_url }}" alt="" loading="lazy"></a>{% else %}<div class="listing-thumb"></div>{% endif %}
     <div class="listing-body">
@@ -84,10 +101,10 @@ PAGE_TEMPLATE = Template(
 <p><em>No new listings since last run.</em></p>
 {% endif %}
 
-{% if region.still_active %}
-<details><summary>📋 Still active ({{ region.still_active|length }})</summary>
+{% if section.still_active %}
+<details><summary>📋 Still active ({{ section.still_active|length }})</summary>
 <ul>
-{% for L in region.still_active %}
+{% for L in section.still_active %}
   <li>{{ L.price_label }} &mdash; {{ L.title }} &middot;
     <a href="{{ L.primary_url }}">link</a>
     {% if L.primary_source %}<span class="src-tag"> [{{ L.primary_source }}]</span>{% endif %}
@@ -99,10 +116,10 @@ PAGE_TEMPLATE = Template(
 </details>
 {% endif %}
 
-{% if region.stale %}
-<details class="stale-summary"><summary>🕸 Stale (90+ days on market) ({{ region.stale|length }})</summary>
+{% if section.stale %}
+<details class="stale-summary"><summary>🕸 Stale (90+ days on market) ({{ section.stale|length }})</summary>
 <ul>
-{% for L in region.stale %}
+{% for L in section.stale %}
   <li>{{ L.price_label }} &mdash; {{ L.title }} &middot;
     <a href="{{ L.primary_url }}">link</a>
     {% if L.primary_source %}<span class="src-tag"> [{{ L.primary_source }}]</span>{% endif %}
@@ -113,16 +130,17 @@ PAGE_TEMPLATE = Template(
 </details>
 {% endif %}
 
-{% if region.dropped_off %}
-<details><summary>⚠️ Dropped off since last run ({{ region.dropped_off|length }})</summary>
+{% if section.dropped_off %}
+<details><summary>⚠️ Dropped off since last run ({{ section.dropped_off|length }})</summary>
 <ul>
-{% for L in region.dropped_off %}
+{% for L in section.dropped_off %}
   <li>{{ L.price_label }} &mdash; {{ L.title }}</li>
 {% endfor %}
 </ul>
 </details>
 {% endif %}
 
+{% endfor %}
 {% endfor %}
 
 <hr>
@@ -210,14 +228,38 @@ def _row_to_view(row: dict) -> dict:
     return out
 
 
-def _empty_region_buckets(name: str) -> dict:
+def _empty_section(pt: str, region) -> dict:
+    if pt == "home":
+        budget_label = f"budget ${region.home_budget_usd:,} USD" if region else ""
+    elif pt == "land":
+        budget_label = f"budget ${region.land_budget_usd:,} USD" if region else ""
+    else:
+        budget_label = ""
     return {
-        "name": name,
+        "key": pt,
+        "label": PROPERTY_TYPE_LABELS[pt],
+        "budget_label": budget_label,
         "new_since_last_run": [],
         "still_active": [],
         "stale": [],
         "dropped_off": [],
     }
+
+
+def _empty_region_buckets(name: str, region=None) -> dict:
+    return {
+        "name": name,
+        "sections": {pt: _empty_section(pt, region) for pt in PROPERTY_TYPE_ORDER},
+    }
+
+
+def _section_has_anything(section: dict) -> bool:
+    return bool(
+        section["new_since_last_run"]
+        or section["still_active"]
+        or section["stale"]
+        or section["dropped_off"]
+    )
 
 
 def build_digest(
@@ -231,32 +273,57 @@ def build_digest(
     """Returns (page_title, html)."""
     by_region: dict[str, dict] = {}
     for r in REGIONS:
-        by_region[r.slug] = _empty_region_buckets(r.name)
+        by_region[r.slug] = _empty_region_buckets(r.name, r)
 
     def assign(rows: list[dict], key: str) -> None:
         for row in rows:
             view = _row_to_view(row)
             slugs = regions_for(row) or [REGIONS[0].slug]
+            pt = (row.get("property_type") or "unknown").lower()
+            if pt not in PROPERTY_TYPE_ORDER:
+                pt = "unknown"
             for slug in slugs:
+                region = by_slug(slug)
                 bucket = by_region.setdefault(
                     slug,
-                    _empty_region_buckets(by_slug(slug).name if by_slug(slug) else slug),
+                    _empty_region_buckets(region.name if region else slug, region),
                 )
-                bucket[key].append(view)
+                bucket["sections"][pt][key].append(view)
 
     assign(buckets.new_since_last_run, "new_since_last_run")
     assign(buckets.still_active, "still_active")
     assign(buckets.stale, "stale")
     assign(buckets.dropped_off, "dropped_off")
 
+    # Show home/land sections always so empty searches stay visible. Hide the
+    # unknown section unless it has something to show.
     region_views = list(by_region.values())
-    total_new = sum(len(v["new_since_last_run"]) for v in region_views)
-    total_active = sum(len(v["still_active"]) for v in region_views)
-    total_stale = sum(len(v["stale"]) for v in region_views)
-    total_dropped = sum(len(v["dropped_off"]) for v in region_views)
+    for v in region_views:
+        v["visible_sections"] = [
+            v["sections"][pt]
+            for pt in PROPERTY_TYPE_ORDER
+            if pt in ("home", "land") or _section_has_anything(v["sections"][pt])
+        ]
+        v["new_since_last_run_count"] = sum(
+            len(s["new_since_last_run"]) for s in v["sections"].values()
+        )
+
+    def _sum(key: str) -> int:
+        return sum(
+            len(s[key]) for v in region_views for s in v["sections"].values()
+        )
+
+    total_new = _sum("new_since_last_run")
+    total_active = _sum("still_active")
+    total_stale = _sum("stale")
+    total_dropped = _sum("dropped_off")
 
     date_label = date.today().isoformat()
-    per_region_new = ", ".join(f"{v['name']}: {len(v['new_since_last_run'])}" for v in region_views if v["new_since_last_run"])
+    per_region_new = ", ".join(
+        f"{v['name']}: {v['new_since_last_run_count']}"
+        for v in region_views
+        if v["new_since_last_run_count"]
+    )
     subject = f"Jamaica property watch — {date_label} — {total_new} new" + (f" ({per_region_new})" if per_region_new else "")
     summary_line = (
         f"{total_new} new since last run, "
