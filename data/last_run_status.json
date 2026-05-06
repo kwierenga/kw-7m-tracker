@@ -1,0 +1,25 @@
+{
+  "run_iso": "2026-05-06T15:26:40.652282+00:00",
+  "new": 3,
+  "dropped": 2,
+  "active": 0,
+  "stale": 0,
+  "new_by_region": {
+    "mammee_bay": 1,
+    "discovery_bay": 2,
+    "runaway_bay": 2
+  },
+  "dropped_by_region": {
+    "upton": 2
+  },
+  "sources_counts": {
+    "realtor_com_intl": 18,
+    "cb_jamaica": 8,
+    "caribbean_mls": 12,
+    "millennium": 85,
+    "golden_gates": 102,
+    "century21_jm": 5,
+    "xposure": 1
+  },
+  "commit_subject": "daily run 2026-05-06 \u2014 5 new (discovery_bay: 2, runaway_bay: 2, mammee_bay: 1), 2 dropped in upton"
+}
