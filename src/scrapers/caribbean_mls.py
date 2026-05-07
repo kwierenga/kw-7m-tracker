@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 from curl_cffi import requests as cf
 
 from ..models import RawListing
+from ._throttle import Throttle, polite_get
 
 SOURCE = "caribbean_mls"
 BASE = "https://caribbeanrealestatemls.com"
@@ -17,10 +18,11 @@ URLS = [f"{BASE}/destinations/jamaica/"]
 
 def scrape() -> list[RawListing]:
     out: list[RawListing] = []
+    throttle = Throttle()
     with cf.Session(impersonate="chrome131") as s:
         for url in URLS:
             try:
-                r = s.get(url, allow_redirects=True, timeout=30)
+                r = polite_get(s, url, throttle, allow_redirects=True, timeout=30)
                 if r.status_code != 200:
                     continue
                 out.extend(_parse(r.text))

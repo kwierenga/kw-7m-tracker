@@ -9,6 +9,7 @@ from curl_cffi import requests as cf
 
 from ..models import RawListing
 from ..photos import extract_first_img
+from ._throttle import Throttle, polite_get
 
 SOURCE = "cb_jamaica"
 BASE = "https://cbjamaica.com"
@@ -22,14 +23,15 @@ URLS = [
 def scrape() -> list[RawListing]:
     out: list[RawListing] = []
     seen_urls: set[str] = set()
+    throttle = Throttle()
     with cf.Session(impersonate="chrome131") as s:
         try:
-            s.get(f"{BASE}/", allow_redirects=True, timeout=30)
+            polite_get(s, f"{BASE}/", throttle, allow_redirects=True, timeout=30)
         except Exception:  # noqa: BLE001
             pass
         for url in URLS:
             try:
-                r = s.get(url, allow_redirects=True, timeout=30)
+                r = polite_get(s, url, throttle, allow_redirects=True, timeout=30)
                 if r.status_code != 200:
                     continue
                 for raw in _parse(r.text):

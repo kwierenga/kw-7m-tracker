@@ -19,6 +19,7 @@ from bs4 import BeautifulSoup
 from curl_cffi import requests as cf
 
 from ..models import RawListing
+from ._throttle import Throttle, polite_get
 
 SOURCE = "xposure"
 URLS_FILE = Path(__file__).resolve().parent.parent.parent / "data" / "xposure_urls.txt"
@@ -41,10 +42,11 @@ def scrape() -> list[RawListing]:
         return []
     out: list[RawListing] = []
     fetched_at = datetime.now(timezone.utc).isoformat()
+    throttle = Throttle()
     with cf.Session(impersonate="chrome131") as s:
         for url in urls:
             try:
-                r = s.get(url, allow_redirects=True, timeout=30)
+                r = polite_get(s, url, throttle, allow_redirects=True, timeout=30)
                 if r.status_code != 200:
                     continue
                 listing = _parse(r.text, url, fetched_at)
