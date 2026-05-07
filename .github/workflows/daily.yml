@@ -44,7 +44,20 @@ jobs:
           git config user.name "property-watch-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/listings.db data/fx_cache.json data/last_digest.html data/last_run_status.json docs/
-          if ! git diff --staged --quiet; then
-            git commit -m "$subject"
-            git push
+          if git diff --staged --quiet; then
+            echo "nothing staged"
+            exit 0
           fi
+          git commit -m "$subject"
+          # Retry-with-rebase to handle race with manual commits to main during the run.
+          # Runner-generated changes only touch data/ + docs/, so rebases on top of
+          # src/ commits are non-conflicting.
+          for attempt in 1 2 3; do
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected on attempt $attempt — pulling --rebase and retrying"
+            git pull --rebase origin main || { echo "rebase failed"; exit 1; }
+          done
+          echo "push still failing after 3 retries"
+          exit 1

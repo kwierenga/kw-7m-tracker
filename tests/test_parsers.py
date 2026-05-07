@@ -21,6 +21,7 @@ from src.scrapers import (
     golden_gates,
     millennium,
     realtor_com_intl,
+    remax_elite,
     xposure_manual,
 )
 
@@ -73,6 +74,12 @@ class ParserSmokeTests(unittest.TestCase):
     def test_century21_jm(self) -> None:
         listings = century21_jm._parse(_load("century21_jm.html"))
         self._check_minimum(listings, 3, "century21_jm")
+
+    def test_remax_elite(self) -> None:
+        listings = remax_elite._parse(_load("remax_elite.html"))
+        self._check_minimum(listings, 10, "remax_elite")
+        self.assertTrue(any(L.raw_price for L in listings))
+        self.assertTrue(any(L.photo_url for L in listings))
 
     def test_xposure_interactive(self) -> None:
         listing = xposure_manual._parse(

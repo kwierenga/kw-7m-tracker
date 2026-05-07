@@ -16,10 +16,16 @@ BASE = "https://century21jm.com"
 
 def _build_urls() -> list[str]:
     urls = [f"{BASE}/"]
-    # Per agent inspection: search URL has form
-    # /search/residential-commercial/residential/rent-sale/sale/page/N/limit/12/range/H
-    base_search = "/search/residential-commercial/residential/rent-sale/sale"
-    for page in range(1, 8):
+    # The IDX search URL is a full template with placeholder segments for
+    # every unfilled filter. The shorter form (just sale/page/N) returns 404.
+    # Pull residential+commercial together so land/lots are included.
+    base_search = (
+        "/search/residential-commercial/residential-commercial/rent-sale/sale"
+        "/parish/parish/town/town/property-type/property-type"
+        "/currency/currency/id-search/id-search/sqft_total/sqft_total"
+        "/bed/bed/bath/bath/search/search/from/from/to/to"
+    )
+    for page in range(1, 16):
         urls.append(f"{BASE}{base_search}/page/{page}/limit/12/range/H")
     return urls
 

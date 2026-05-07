@@ -96,6 +96,7 @@ def normalize_one(raw: RawListing) -> NormalizedListing:
         keyword_boost=boosted,
         listed_on_iso=raw.listed_on_iso,
         photo_url=raw.photo_url,
+        contributing_source_ids=[(raw.source, raw.source_id)],
     )
 
 

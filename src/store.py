@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import uuid
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterable, Iterator
@@ -11,6 +12,7 @@ DB_PATH = Path(__file__).resolve().parent.parent / "data" / "listings.db"
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS listings (
     stable_id TEXT PRIMARY KEY,
+    canonical_id TEXT,
     sources_json TEXT NOT NULL,
     urls_json TEXT NOT NULL,
     title TEXT,
@@ -33,6 +35,19 @@ CREATE TABLE IF NOT EXISTS listings (
 
 CREATE INDEX IF NOT EXISTS idx_listings_last_seen ON listings(last_seen_iso);
 CREATE INDEX IF NOT EXISTS idx_listings_first_seen ON listings(first_seen_iso);
+-- canonical_id index created in _migrate() after the column has been added on legacy DBs.
+
+-- Maps every (source, source_id) we've ever observed to a canonical_id, so that
+-- a property's identity survives transient source flakes. When dedup merges
+-- listings across sources, all their (source, source_id) entries point to the
+-- same canonical_id afterwards.
+CREATE TABLE IF NOT EXISTS aliases (
+    source TEXT NOT NULL,
+    source_id TEXT NOT NULL,
+    canonical_id TEXT NOT NULL,
+    PRIMARY KEY (source, source_id)
+);
+CREATE INDEX IF NOT EXISTS idx_aliases_canonical ON aliases(canonical_id);
 
 CREATE TABLE IF NOT EXISTS run_log (
     run_iso TEXT PRIMARY KEY,
@@ -53,6 +68,36 @@ def _migrate(con: sqlite3.Connection) -> None:
     if "sources_json" not in cols:
         con.execute("ALTER TABLE run_log ADD COLUMN sources_json TEXT")
 
+    cur = con.execute("PRAGMA table_info(listings)")
+    listing_cols = {r[1] for r in cur.fetchall()}
+    if "canonical_id" not in listing_cols:
+        con.execute("ALTER TABLE listings ADD COLUMN canonical_id TEXT")
+        con.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_listings_canonical "
+            "ON listings(canonical_id) WHERE canonical_id IS NOT NULL"
+        )
+
+    # Backfill canonical_id for legacy rows: seed with stable_id (preserves
+    # current identity) and seed aliases from the parsed source:source_id.
+    rows = con.execute(
+        "SELECT stable_id FROM listings WHERE canonical_id IS NULL"
+    ).fetchall()
+    for r in rows:
+        sid = r[0]
+        canonical = sid  # use existing stable_id as the seed canonical_id
+        con.execute("UPDATE listings SET canonical_id = ? WHERE stable_id = ?", (canonical, sid))
+        if ":" in sid:
+            source, source_id = sid.split(":", 1)
+            con.execute(
+                "INSERT OR IGNORE INTO aliases (source, source_id, canonical_id) "
+                "VALUES (?, ?, ?)",
+                (source, source_id, canonical),
+            )
+
+
+def mint_canonical_id() -> str:
+    return uuid.uuid4().hex
+
 
 @contextmanager
 def connect(path: Path = DB_PATH) -> Iterator[sqlite3.Connection]:
@@ -68,69 +113,148 @@ def connect(path: Path = DB_PATH) -> Iterator[sqlite3.Connection]:
         con.close()
 
 
+def lookup_canonical_id(con: sqlite3.Connection, source: str, source_id: str) -> str | None:
+    row = con.execute(
+        "SELECT canonical_id FROM aliases WHERE source = ? AND source_id = ?",
+        (source, source_id),
+    ).fetchone()
+    return row[0] if row else None
+
+
+def write_alias(con: sqlite3.Connection, source: str, source_id: str, canonical_id: str) -> None:
+    """Idempotently set (source, source_id) → canonical_id. If a different
+    canonical_id was previously recorded, this overwrites it (re-aliasing)."""
+    con.execute(
+        """
+        INSERT INTO aliases (source, source_id, canonical_id) VALUES (?, ?, ?)
+        ON CONFLICT(source, source_id) DO UPDATE SET canonical_id = excluded.canonical_id
+        """,
+        (source, source_id, canonical_id),
+    )
+
+
+def reassign_aliases(con: sqlite3.Connection, old_canonical: str, new_canonical: str) -> None:
+    """When dedup unifies two listings, point every alias of the loser at the winner.
+    Also rename any listings row that still carries the loser canonical."""
+    if old_canonical == new_canonical:
+        return
+    con.execute(
+        "UPDATE aliases SET canonical_id = ? WHERE canonical_id = ?",
+        (new_canonical, old_canonical),
+    )
+    con.execute(
+        "DELETE FROM listings WHERE canonical_id = ?",
+        (old_canonical,),
+    )
+
+
 def upsert_listings(con: sqlite3.Connection, listings: Iterable[dict], run_iso: str) -> tuple[int, int]:
-    """Returns (n_new, n_updated)."""
+    """Returns (n_new, n_updated). Each listing must have a canonical_id assigned."""
     n_new = n_updated = 0
     cur = con.cursor()
     for L in listings:
+        canonical = L["canonical_id"]
+        # stable_id retained as a debug breadcrumb of which scraper the merged
+        # listing's "primary" was at write time. Identity for dedup is canonical_id.
+        stable = L.get("stable_id") or canonical
         existing = cur.execute(
-            "SELECT first_seen_iso FROM listings WHERE stable_id = ?", (L["stable_id"],)
+            "SELECT first_seen_iso, stable_id FROM listings WHERE canonical_id = ?",
+            (canonical,),
         ).fetchone()
         first_seen = existing["first_seen_iso"] if existing else run_iso
-        cur.execute(
-            """
-            INSERT INTO listings (
-                stable_id, sources_json, urls_json, title, description,
-                property_type, price_usd, price_original, price_currency,
-                lat, lon, location_text, location_confidence,
-                matched_regions_json, keyword_boost,
-                listed_on_iso, photo_url, first_seen_iso, last_seen_iso
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            ON CONFLICT(stable_id) DO UPDATE SET
-                sources_json=excluded.sources_json,
-                urls_json=excluded.urls_json,
-                title=excluded.title,
-                description=excluded.description,
-                property_type=excluded.property_type,
-                price_usd=excluded.price_usd,
-                price_original=excluded.price_original,
-                price_currency=excluded.price_currency,
-                lat=excluded.lat,
-                lon=excluded.lon,
-                location_text=excluded.location_text,
-                location_confidence=excluded.location_confidence,
-                matched_regions_json=excluded.matched_regions_json,
-                keyword_boost=excluded.keyword_boost,
-                listed_on_iso=COALESCE(excluded.listed_on_iso, listings.listed_on_iso),
-                photo_url=COALESCE(excluded.photo_url, listings.photo_url),
-                last_seen_iso=excluded.last_seen_iso
-            """,
-            (
-                L["stable_id"],
-                json.dumps(L["sources"]),
-                json.dumps(L["urls"]),
-                L["title"],
-                L.get("description"),
-                L.get("property_type"),
-                L.get("price_usd"),
-                L.get("price_original"),
-                L.get("price_currency"),
-                L.get("lat"),
-                L.get("lon"),
-                L.get("location_text"),
-                L.get("location_confidence"),
-                json.dumps(L.get("matched_regions", [])),
-                1 if L.get("keyword_boost") else 0,
-                L.get("listed_on_iso"),
-                L.get("photo_url"),
-                first_seen,
-                run_iso,
-            ),
-        )
-        if existing is None:
-            n_new += 1
-        else:
+        if existing:
+            cur.execute(
+                """
+                UPDATE listings SET
+                    stable_id=?,
+                    sources_json=?,
+                    urls_json=?,
+                    title=?,
+                    description=?,
+                    property_type=?,
+                    price_usd=?,
+                    price_original=?,
+                    price_currency=?,
+                    lat=?,
+                    lon=?,
+                    location_text=?,
+                    location_confidence=?,
+                    matched_regions_json=?,
+                    keyword_boost=?,
+                    listed_on_iso=COALESCE(?, listed_on_iso),
+                    photo_url=COALESCE(?, photo_url),
+                    last_seen_iso=?
+                WHERE canonical_id=?
+                """,
+                (
+                    stable,
+                    json.dumps(L["sources"]),
+                    json.dumps(L["urls"]),
+                    L["title"],
+                    L.get("description"),
+                    L.get("property_type"),
+                    L.get("price_usd"),
+                    L.get("price_original"),
+                    L.get("price_currency"),
+                    L.get("lat"),
+                    L.get("lon"),
+                    L.get("location_text"),
+                    L.get("location_confidence"),
+                    json.dumps(L.get("matched_regions", [])),
+                    1 if L.get("keyword_boost") else 0,
+                    L.get("listed_on_iso"),
+                    L.get("photo_url"),
+                    run_iso,
+                    canonical,
+                ),
+            )
             n_updated += 1
+        else:
+            cur.execute(
+                """
+                INSERT INTO listings (
+                    stable_id, canonical_id, sources_json, urls_json, title, description,
+                    property_type, price_usd, price_original, price_currency,
+                    lat, lon, location_text, location_confidence,
+                    matched_regions_json, keyword_boost,
+                    listed_on_iso, photo_url, first_seen_iso, last_seen_iso
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(stable_id) DO UPDATE SET
+                    canonical_id=excluded.canonical_id,
+                    sources_json=excluded.sources_json,
+                    urls_json=excluded.urls_json,
+                    title=excluded.title,
+                    last_seen_iso=excluded.last_seen_iso
+                """,
+                (
+                    stable,
+                    canonical,
+                    json.dumps(L["sources"]),
+                    json.dumps(L["urls"]),
+                    L["title"],
+                    L.get("description"),
+                    L.get("property_type"),
+                    L.get("price_usd"),
+                    L.get("price_original"),
+                    L.get("price_currency"),
+                    L.get("lat"),
+                    L.get("lon"),
+                    L.get("location_text"),
+                    L.get("location_confidence"),
+                    json.dumps(L.get("matched_regions", [])),
+                    1 if L.get("keyword_boost") else 0,
+                    L.get("listed_on_iso"),
+                    L.get("photo_url"),
+                    first_seen,
+                    run_iso,
+                ),
+            )
+            n_new += 1
+
+        # Persist aliases for every observed (source, source_id). The
+        # contributing_source_ids list is set by main.py before we reach here.
+        for source, source_id in L.get("contributing_source_ids", []):
+            write_alias(con, source, source_id, canonical)
     return n_new, n_updated
 
 

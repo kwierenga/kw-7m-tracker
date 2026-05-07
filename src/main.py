@@ -17,6 +17,9 @@ from .store import (
     connect,
     listings_dropped_in_run,
     listings_seen_in_run,
+    lookup_canonical_id,
+    mint_canonical_id,
+    reassign_aliases,
     upsert_listings,
     write_run_log,
 )
@@ -56,13 +59,44 @@ def run(dry_run: bool) -> int:
     matched = [n for n in norms if n.matched_regions]
     print(f"[filter] {len(matched)} matched at least one region")
 
-    merged = dedup(matched)
-    print(f"[dedup] {len(merged)} after dedup")
-
     with connect() as con:
         prev_run = previous_run_iso(con)
         print(f"[store] previous run = {prev_run}")
-        rows_for_db = [asdict(L) | {"sources": L.sources, "urls": L.urls, "matched_regions": L.matched_regions} for L in merged]
+
+        # Resolve canonical_ids BEFORE dedup so two source-rows for the same
+        # property carry the same canonical from the start. New (source,
+        # source_id) pairs get a freshly minted UUID; existing pairs reuse
+        # whatever the aliases table already maps them to.
+        n_resolved = n_minted = 0
+        for n in matched:
+            if not n.contributing_source_ids:
+                continue
+            src, sid = n.contributing_source_ids[0]
+            existing = lookup_canonical_id(con, src, sid)
+            if existing:
+                n.canonical_id = existing
+                n_resolved += 1
+            else:
+                n.canonical_id = mint_canonical_id()
+                n_minted += 1
+        print(f"[canonical] resolved={n_resolved} minted={n_minted}")
+
+        merged, alias_reassignments = dedup(matched)
+        print(f"[dedup] {len(merged)} after dedup, {len(alias_reassignments)} alias merges")
+
+        for old, new in alias_reassignments:
+            reassign_aliases(con, old, new)
+
+        rows_for_db = [
+            asdict(L) | {
+                "sources": L.sources,
+                "urls": L.urls,
+                "matched_regions": L.matched_regions,
+                "canonical_id": L.canonical_id,
+                "contributing_source_ids": L.contributing_source_ids,
+            }
+            for L in merged
+        ]
         n_new_inserted, n_updated = upsert_listings(con, rows_for_db, run_iso)
         print(f"[store] inserted={n_new_inserted} updated={n_updated}")
 

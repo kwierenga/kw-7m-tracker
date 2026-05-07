@@ -79,6 +79,34 @@ REGIONS: tuple[Region, ...] = (
             "boston bay", "drapers", "fairy hill", "blue lagoon", "geejam",
         ),
     ),
+    Region(
+        slug="negril",
+        name="Negril",
+        lat=18.273467823801834,
+        lon=-78.34034331078504,
+        radius_miles=7.0,
+        home_budget_usd=800_000,
+        land_budget_usd=350_000,
+        boost_keywords=(
+            "negril", "seven mile beach", "seven-mile beach", "west end",
+            "long bay", "bloody bay", "norman manley boulevard",
+            "rutland point", "little bay", "orange bay", "red ground",
+        ),
+    ),
+    Region(
+        slug="moneague",
+        name="Moneague",
+        lat=18.27716307929288,
+        lon=-77.12037261216696,
+        radius_miles=7.0,
+        home_budget_usd=800_000,
+        land_budget_usd=350_000,
+        boost_keywords=(
+            "moneague", "walkers wood", "walker's wood", "claremont",
+            "faiths pen", "faith's pen", "bamboo", "pimento walk",
+            "golden grove", "epworth",
+        ),
+    ),
 )
 
 

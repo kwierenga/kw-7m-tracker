@@ -48,3 +48,10 @@ class NormalizedListing:
     photo_url: str | None = None
     first_seen_iso: str | None = None
     last_seen_iso: str | None = None
+    # Stable identity that survives source flakes. Set after normalize, before
+    # dedup, by resolving against the aliases table (or minting if unseen).
+    canonical_id: str | None = None
+    # Every (source, source_id) that contributed to this listing this run.
+    # Populated by normalize (single entry) and grown by dedup on merge.
+    # Used at upsert time to write/refresh alias rows.
+    contributing_source_ids: list[tuple[str, str]] = field(default_factory=list)
