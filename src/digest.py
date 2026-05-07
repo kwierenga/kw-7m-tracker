@@ -341,6 +341,98 @@ PAGE_TEMPLATE = Template(
   }
   .footer .src-fail { color: #d44; font-weight: 700; }
 
+  /* --- status tracking (localStorage) --- */
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.75rem;
+    align-items: center;
+    margin: 0 0 1rem;
+    padding: 0.55rem 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.85rem;
+  }
+  .filter-bar label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+  }
+  .filter-bar input[type="checkbox"] { accent-color: var(--accent); }
+  .filter-bar .filter-counts {
+    margin-left: auto;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .filter-bar .filter-counts .star { color: var(--boost); }
+  .filter-bar .filter-counts .contacted { color: var(--link); }
+
+  .status-controls {
+    display: inline-flex;
+    gap: 0.2rem;
+    margin-left: auto;
+  }
+  .status-controls.compact { margin-left: 0.2rem; }
+  .status-btn {
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-faint);
+    border-radius: 6px;
+    padding: 0.15rem 0.4rem;
+    font-size: 0.85rem;
+    line-height: 1.1;
+    cursor: pointer;
+    transition: background 0.1s, color 0.1s, border-color 0.1s;
+  }
+  .status-btn:hover { background: var(--surface-2); color: var(--text); }
+  .status-btn[aria-pressed="true"] { color: var(--text); border-color: transparent; }
+  .status-btn[data-status="interested"][aria-pressed="true"] {
+    background: var(--new-bg);
+    color: var(--new-text);
+  }
+  .status-btn[data-status="contacted"][aria-pressed="true"] {
+    background: var(--accent-bg);
+    color: var(--accent);
+  }
+  .status-btn[data-status="dismissed"][aria-pressed="true"] {
+    background: var(--surface-2);
+    color: var(--text-muted);
+  }
+
+  /* card decorations driven by data-status attribute set by JS */
+  .card[data-status="interested"] { box-shadow: inset 4px 0 0 var(--boost), var(--shadow); }
+  .card[data-status="contacted"] { box-shadow: inset 4px 0 0 var(--accent), var(--shadow); }
+  .compact-list li[data-status="interested"] .row-title { font-weight: 600; }
+  .compact-list li[data-status="contacted"] .row-title::after {
+    content: " ✉";
+    color: var(--link);
+    font-weight: 600;
+  }
+
+  /* dismissed: hide unless body.show-dismissed; show as faded when revealed */
+  body:not(.show-dismissed) .card[data-status="dismissed"],
+  body:not(.show-dismissed) .compact-list li[data-status="dismissed"] {
+    display: none;
+  }
+  body.show-dismissed .card[data-status="dismissed"],
+  body.show-dismissed .compact-list li[data-status="dismissed"] {
+    opacity: 0.5;
+  }
+
+  /* only-interested filter: hide everything that isn't interested */
+  body.only-interested .card:not([data-status="interested"]),
+  body.only-interested .compact-list li:not([data-status="interested"]) {
+    display: none;
+  }
+  /* in only-interested mode, collapse empty subsections gracefully */
+  body.only-interested .empty-line { display: none; }
+
   @media (max-width: 600px) {
     body { padding: 0.75rem 0.85rem 3rem; font-size: 15px; }
     .card {
@@ -351,6 +443,7 @@ PAGE_TEMPLATE = Template(
     .card-thumb, .card-thumb-empty { width: 96px; }
     h1 { font-size: 1.4rem; }
     .region-header h2 { font-size: 1.15rem; }
+    .status-btn { padding: 0.25rem 0.5rem; font-size: 0.95rem; }
   }
 </style>
 </head>
@@ -370,6 +463,12 @@ PAGE_TEMPLATE = Template(
   {{ total_stale }} stale &middot;
   {{ total_dropped }} dropped off
 </p>
+
+<div class="filter-bar" id="filter-bar" hidden>
+  <label><input type="checkbox" id="filter-only-interested"> Only interested</label>
+  <label><input type="checkbox" id="filter-show-dismissed"> Show dismissed</label>
+  <span class="filter-counts" id="filter-counts"></span>
+</div>
 
 {% if regions %}
 <nav class="region-jump" aria-label="region jump">
@@ -402,7 +501,7 @@ PAGE_TEMPLATE = Template(
     {% if section.new_since_last_run %}
       <ul class="listings">
       {% for L in section.new_since_last_run %}
-        <li class="card is-new{% if L.keyword_boost %} is-boost{% endif %}">
+        <li class="card is-new{% if L.keyword_boost %} is-boost{% endif %}"{% if L.track_id %} data-id="{{ L.track_id }}"{% endif %}>
           {% if L.photo_url %}
           <a class="card-thumb-link" href="{{ L.primary_url }}" tabindex="-1"><img class="card-thumb" src="{{ L.photo_url }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
           {% else %}
@@ -426,6 +525,13 @@ PAGE_TEMPLATE = Template(
               </span>
               {% endif %}
               <span>first seen {{ L.first_seen_label }}{% if L.listed_on_iso %} &middot; listed {{ L.listed_on_label }}{% endif %}</span>
+              {% if L.track_id %}
+              <span class="status-controls" role="group" aria-label="status">
+                <button type="button" class="status-btn" data-status="interested" aria-pressed="false" title="Mark as interested">⭐</button>
+                <button type="button" class="status-btn" data-status="contacted" aria-pressed="false" title="Mark as contacted">✉</button>
+                <button type="button" class="status-btn" data-status="dismissed" aria-pressed="false" title="Dismiss (hide)">✕</button>
+              </span>
+              {% endif %}
             </div>
           </div>
         </li>
@@ -440,12 +546,19 @@ PAGE_TEMPLATE = Template(
       <summary>{{ section.still_active|length }} still active</summary>
       <ul class="compact-list">
         {% for L in section.still_active %}
-        <li>
+        <li{% if L.track_id %} data-id="{{ L.track_id }}"{% endif %}>
           <span class="price">{{ L.price_label }}</span>
-          <span><a href="{{ L.primary_url }}">{{ L.title|truncate(70) }}</a></span>
+          <span class="row-title"><a href="{{ L.primary_url }}">{{ L.title|truncate(70) }}</a></span>
           {% if L.primary_source %}<span class="src-pill">{{ L.primary_source }}</span>{% endif %}
           {% if L.other_sources %}<span class="age">+{{ L.other_sources|length }} other</span>{% endif %}
           <span class="age">first seen {{ L.first_seen_label }}</span>
+          {% if L.track_id %}
+          <span class="status-controls compact" role="group" aria-label="status">
+            <button type="button" class="status-btn" data-status="interested" aria-pressed="false" title="Mark as interested">⭐</button>
+            <button type="button" class="status-btn" data-status="contacted" aria-pressed="false" title="Mark as contacted">✉</button>
+            <button type="button" class="status-btn" data-status="dismissed" aria-pressed="false" title="Dismiss (hide)">✕</button>
+          </span>
+          {% endif %}
         </li>
         {% endfor %}
       </ul>
@@ -457,11 +570,18 @@ PAGE_TEMPLATE = Template(
       <summary>{{ section.stale|length }} stale (90+ days)</summary>
       <ul class="compact-list">
         {% for L in section.stale %}
-        <li>
+        <li{% if L.track_id %} data-id="{{ L.track_id }}"{% endif %}>
           <span class="price">{{ L.price_label }}</span>
-          <span><a href="{{ L.primary_url }}">{{ L.title|truncate(70) }}</a></span>
+          <span class="row-title"><a href="{{ L.primary_url }}">{{ L.title|truncate(70) }}</a></span>
           {% if L.primary_source %}<span class="src-pill">{{ L.primary_source }}</span>{% endif %}
           <span class="age">first seen {{ L.first_seen_label }}</span>
+          {% if L.track_id %}
+          <span class="status-controls compact" role="group" aria-label="status">
+            <button type="button" class="status-btn" data-status="interested" aria-pressed="false" title="Mark as interested">⭐</button>
+            <button type="button" class="status-btn" data-status="contacted" aria-pressed="false" title="Mark as contacted">✉</button>
+            <button type="button" class="status-btn" data-status="dismissed" aria-pressed="false" title="Dismiss (hide)">✕</button>
+          </span>
+          {% endif %}
         </li>
         {% endfor %}
       </ul>
@@ -505,6 +625,122 @@ PAGE_TEMPLATE = Template(
   {% endif %}
   {% if notes %}<br>Notes: {{ notes }}{% endif %}
 </footer>
+
+<script>
+(function () {
+  // Per-listing status persisted in localStorage. Keyed by track_id (canonical_id
+  // when available, stable_id otherwise). One status per listing — mutually
+  // exclusive (interested / contacted / dismissed). Clicking the active button
+  // clears the status. Filter prefs persist separately.
+  var STATUS_KEY = 'kw7m_status_v1';
+  var FILTER_KEY = 'kw7m_filters_v1';
+
+  function readJSON(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
+  function writeJSON(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (_) {}
+  }
+
+  var statuses = readJSON(STATUS_KEY, {}) || {};
+  var filters = readJSON(FILTER_KEY, {showDismissed: false, onlyInterested: false}) || {};
+
+  function applyRow(el) {
+    var id = el.getAttribute('data-id');
+    if (!id) return;
+    var s = statuses[id] && statuses[id].s;
+    if (s) {
+      el.setAttribute('data-status', s);
+    } else {
+      el.removeAttribute('data-status');
+    }
+    var btns = el.querySelectorAll('.status-btn');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].setAttribute('aria-pressed', btns[i].getAttribute('data-status') === s ? 'true' : 'false');
+    }
+  }
+
+  function applyAll() {
+    var rows = document.querySelectorAll('[data-id]');
+    for (var i = 0; i < rows.length; i++) applyRow(rows[i]);
+    document.body.classList.toggle('show-dismissed', !!filters.showDismissed);
+    document.body.classList.toggle('only-interested', !!filters.onlyInterested);
+    updateCounts();
+  }
+
+  function updateCounts() {
+    var n = {interested: 0, contacted: 0, dismissed: 0};
+    for (var id in statuses) {
+      if (Object.prototype.hasOwnProperty.call(statuses, id)) {
+        var s = statuses[id] && statuses[id].s;
+        if (n.hasOwnProperty(s)) n[s]++;
+      }
+    }
+    var el = document.getElementById('filter-counts');
+    if (!el) return;
+    var parts = [];
+    if (n.interested) parts.push('<span class="star">⭐ ' + n.interested + ' interested</span>');
+    if (n.contacted) parts.push('<span class="contacted">✉ ' + n.contacted + ' contacted</span>');
+    if (n.dismissed) parts.push(n.dismissed + ' dismissed');
+    el.innerHTML = parts.join(' &middot; ');
+  }
+
+  function setStatus(id, newStatus) {
+    if (!id) return;
+    if (newStatus) {
+      statuses[id] = {s: newStatus, ts: Date.now()};
+    } else {
+      delete statuses[id];
+    }
+    writeJSON(STATUS_KEY, statuses);
+    var rows = document.querySelectorAll('[data-id="' + cssEscape(id) + '"]');
+    for (var i = 0; i < rows.length; i++) applyRow(rows[i]);
+    updateCounts();
+  }
+
+  function cssEscape(s) {
+    if (window.CSS && CSS.escape) return CSS.escape(s);
+    return String(s).replace(/["\\]/g, '\\$&');
+  }
+
+  document.addEventListener('click', function (ev) {
+    var btn = ev.target.closest && ev.target.closest('.status-btn');
+    if (!btn) return;
+    ev.preventDefault();
+    var row = btn.closest('[data-id]');
+    if (!row) return;
+    var id = row.getAttribute('data-id');
+    var clicked = btn.getAttribute('data-status');
+    var current = statuses[id] && statuses[id].s;
+    setStatus(id, current === clicked ? null : clicked);
+  });
+
+  function bindFilter(checkboxId, key) {
+    var cb = document.getElementById(checkboxId);
+    if (!cb) return;
+    cb.checked = !!filters[key];
+    cb.addEventListener('change', function () {
+      filters[key] = cb.checked;
+      writeJSON(FILTER_KEY, filters);
+      document.body.classList.toggle(checkboxId === 'filter-show-dismissed' ? 'show-dismissed' : 'only-interested', cb.checked);
+    });
+  }
+
+  // Reveal the filter bar only when JS is active (it's hidden by default so
+  // a JS-disabled visitor doesn't see non-functional toggles).
+  var bar = document.getElementById('filter-bar');
+  if (bar) bar.removeAttribute('hidden');
+
+  bindFilter('filter-show-dismissed', 'showDismissed');
+  bindFilter('filter-only-interested', 'onlyInterested');
+  applyAll();
+})();
+</script>
 
 </body>
 </html>
@@ -628,6 +864,9 @@ def _row_to_view(row: dict) -> dict:
     out["price_label"] = _price_label(row)
     out["first_seen_label"] = _relative_time(row.get("first_seen_iso"))
     out["listed_on_label"] = _relative_time(row.get("listed_on_iso")) if row.get("listed_on_iso") else ""
+    # Stable identity for client-side status tracking (localStorage keys).
+    # canonical_id is preferred; stable_id is the legacy fallback.
+    out["track_id"] = row.get("canonical_id") or row.get("stable_id") or ""
     return out
 
 

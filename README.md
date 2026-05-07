@@ -19,6 +19,8 @@ Configured in [`src/regions.py`](src/regions.py):
   - Runaway Bay / Cardiff Hall
   - Mammee Bay
   - Port Antonio (Portland)
+  - Negril
+  - Moneague
 - **Radius:** 7 miles per region
 - **Budget:** homes ≤ $800K USD, land ≤ $350K USD (per region)
 - **Boost keywords** per region — see `boost_keywords` in `REGIONS`
