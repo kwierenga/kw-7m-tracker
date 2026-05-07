@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv/Scripts/python.exe -m unittest discover -s tests)",
+      "Bash(.venv/Scripts/python.exe -m unittest discover -s tests -v)"
+    ]
+  }
+}
