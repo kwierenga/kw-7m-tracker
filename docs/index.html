@@ -4,340 +4,1978 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Jamaica property watch — 2026-05-06 — 5 new (Discovery Bay: 2, Runaway Bay / Cardiff Hall: 2, Mammee Bay: 1)</title>
+<title>Jamaica property watch — 2026-05-07 — 56 new (Upton Estate Golf & Country Club: 10, Discovery Bay: 9, Runaway Bay / Cardiff Hall: 11, Mammee Bay: 21, Port Antonio (Portland): 3, Moneague: 2)</title>
 <style>
-  body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 760px; margin: 2em auto; padding: 0 1em; color: #222; }
-  h2 { margin-bottom: 0.2em; }
-  h3 { margin-top: 1.6em; border-bottom: 1px solid #eee; padding-bottom: 0.2em; }
-  h4 { margin-bottom: 0.4em; margin-top: 1.2em; }
-  h5 { margin-bottom: 0.3em; margin-top: 0.8em; color: #444; }
-  .section-header { color: #333; }
-  .section-budget { color: #888; font-weight: normal; font-size: 85%; margin-left: 0.4em; }
-  ul { padding-left: 1.2em; }
-  li { margin-bottom: 0.6em; line-height: 1.4; }
-  .meta { color: #666; font-size: 90%; }
-  .approx { color: #a60; }
-  .note { color: #888; font-size: 85%; }
-  details { margin-top: 0.6em; }
-  summary { cursor: pointer; color: #06a; }
-  a { color: #06a; }
-  .pill-new { background: #d6f5e3; color: #086c3a; padding: 1px 6px; border-radius: 8px; font-size: 80%; }
-  .topnav { color: #888; font-size: 90%; }
-  .src-tag { color: #666; font-size: 85%; }
-  .src-fail { color: #c44; font-weight: 600; }
-  .also-at { color: #888; font-size: 80%; margin-left: 1.5em; display: block; }
-  .also-at a { color: #888; }
-  .listing-row { display: flex; gap: 12px; align-items: flex-start; }
-  .listing-thumb { flex: 0 0 auto; width: 120px; height: 90px; object-fit: cover; border-radius: 4px; background: #eee; }
-  .listing-body { flex: 1 1 auto; min-width: 0; }
-  .stale-summary { color: #888; }
+  :root {
+    --bg: #fafaf6;
+    --surface: #ffffff;
+    --surface-2: #f1efe8;
+    --text: #1c1c1c;
+    --text-muted: #5e5e5e;
+    --text-faint: #8a8a8a;
+    --accent: #0a6c5a;
+    --accent-bg: #d8f1e7;
+    --new-bg: #fff2c4;
+    --new-text: #6b4f00;
+    --boost: #b87900;
+    --border: #e6e3da;
+    --link: #0a5a8d;
+    --warn: #b85400;
+    --shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15181a;
+      --surface: #1e2123;
+      --surface-2: #272a2c;
+      --text: #ececec;
+      --text-muted: #b0b0b0;
+      --text-faint: #7a7a7a;
+      --accent: #5cd8b0;
+      --accent-bg: #163a30;
+      --new-bg: #4a3a00;
+      --new-text: #ffe57a;
+      --boost: #ffba4a;
+      --border: #353a3d;
+      --link: #6db8ee;
+      --warn: #ffa14a;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 1rem 1.25rem 4rem;
+    line-height: 1.5;
+    font-size: 16px;
+  }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-faint);
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.25rem;
+  }
+  .topbar a { color: var(--text-faint); }
+  .topbar .nav-links a { margin-left: 0.9rem; }
+
+  h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0 0 0.4rem;
+    letter-spacing: -0.02em;
+  }
+  .summary {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin: 0 0 1.5rem;
+  }
+  .count-new { color: var(--accent); font-weight: 700; }
+
+  .region-jump {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0 0 2rem;
+  }
+  .region-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    transition: background 0.1s;
+  }
+  .region-chip:hover { text-decoration: none; background: var(--surface-2); }
+  .region-chip.has-new {
+    background: var(--accent-bg);
+    border-color: transparent;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .region-chip-empty { opacity: 0.55; }
+  .region-chip-count { font-variant-numeric: tabular-nums; }
+
+  .region {
+    margin-bottom: 2.5rem;
+    scroll-margin-top: 1rem;
+  }
+  .region-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin: 0 0 0.5rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--border);
+  }
+  .region-header h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .region-stats {
+    color: var(--text-faint);
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .subsection { margin: 1.1rem 0 0.5rem; }
+  .subsection h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+  }
+  .subsection h3 .budget {
+    font-weight: 400;
+    color: var(--text-faint);
+    font-size: 0.8rem;
+    margin-left: 0.5rem;
+  }
+  .empty-line {
+    color: var(--text-faint);
+    font-size: 0.85rem;
+    font-style: italic;
+    margin: 0.25rem 0 0;
+  }
+
+  .listings { list-style: none; padding: 0; margin: 0.5rem 0 0; }
+  .card {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 1rem;
+    padding: 0.85rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 0.6rem;
+    box-shadow: var(--shadow);
+  }
+  .card.is-new { border-color: var(--accent); }
+  /* Boost adds an inset stripe so it can coexist with is-new's green border */
+  .card.is-boost { box-shadow: inset 4px 0 0 var(--boost), var(--shadow); }
+  .card-thumb-link {
+    display: block;
+    width: 140px;
+    aspect-ratio: 4 / 3;
+    border-radius: 6px;
+    background: var(--surface-2);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .card-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .card-thumb.hidden { display: none; }
+  .card-thumb-empty {
+    width: 140px;
+    aspect-ratio: 4 / 3;
+    border-radius: 6px;
+    background: var(--surface-2);
+  }
+  .card-body { min-width: 0; }
+  .card-line1 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.2rem;
+  }
+  .card-price {
+    font-weight: 700;
+    font-size: 1.05rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .pill {
+    display: inline-block;
+    padding: 0.1rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .pill-new {
+    background: var(--new-bg);
+    color: var(--new-text);
+  }
+  .pill-boost {
+    color: var(--boost);
+    font-size: 1rem;
+    line-height: 1;
+  }
+  .card-title {
+    font-size: 0.95rem;
+    margin: 0;
+  }
+  .card-title a {
+    color: var(--text);
+    text-decoration: underline;
+    text-decoration-color: var(--border);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+  .card-title a:hover {
+    color: var(--link);
+    text-decoration-color: var(--link);
+  }
+  .card-loc { color: var(--text-muted); font-size: 0.85rem; margin-top: 0.15rem; }
+  .card-loc-approx::after { content: " (approx)"; color: var(--warn); font-size: 0.8rem; }
+  .card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.85rem;
+    margin-top: 0.5rem;
+    font-size: 0.78rem;
+    color: var(--text-faint);
+    align-items: center;
+  }
+  .src-pill {
+    display: inline-block;
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+    background: var(--surface-2);
+    color: var(--text-muted);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.72rem;
+  }
+  .also-at a { color: var(--text-faint); margin-right: 0.4rem; text-decoration: underline; text-decoration-color: var(--border); }
+
+  details { margin-top: 0.7rem; }
+  details > summary {
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    list-style: none;
+    padding: 0.3rem 0;
+    user-select: none;
+  }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary::before {
+    content: "▸";
+    display: inline-block;
+    margin-right: 0.4rem;
+    transition: transform 0.15s;
+  }
+  details[open] > summary::before { transform: rotate(90deg); }
+  details > summary:hover { color: var(--text); }
+
+  .compact-list { list-style: none; padding: 0; margin: 0.4rem 0 0; }
+  .compact-list li {
+    padding: 0.4rem 0;
+    border-bottom: 1px dashed var(--border);
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.55rem;
+    align-items: center;
+  }
+  .compact-list li:last-child { border-bottom: 0; }
+  .compact-list .price { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .compact-list .age { color: var(--text-faint); font-size: 0.8rem; }
+  .compact-list .dropped-title { color: var(--text-muted); text-decoration: line-through; }
+
+  .quiet-note { margin-top: 1.5rem; }
+  .quiet-note summary { color: var(--text-faint); }
+  .quiet-note ul { list-style: none; padding-left: 1.2rem; color: var(--text-faint); font-size: 0.85rem; }
+
+  .footer {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.78rem;
+    color: var(--text-faint);
+    line-height: 1.6;
+  }
+  .footer .src-fail { color: #d44; font-weight: 700; }
+
+  @media (max-width: 600px) {
+    body { padding: 0.75rem 0.85rem 3rem; font-size: 15px; }
+    .card {
+      grid-template-columns: 96px 1fr;
+      gap: 0.7rem;
+      padding: 0.65rem;
+    }
+    .card-thumb, .card-thumb-empty { width: 96px; }
+    h1 { font-size: 1.4rem; }
+    .region-header h2 { font-size: 1.15rem; }
+  }
 </style>
 </head>
 <body>
-<p class="topnav">
-  <a href="archive/">📚 archive</a>
+
+<header class="topbar">
+  <span>2026-05-07 &middot; 1 USD = 157.49 JMD</span>
+  <span class="nav-links">
+    <a href="archive/">📚 archive</a>
+  </span>
+</header>
+
+<h1>Jamaica property watch</h1>
+<p class="summary">
+  <span class="count-new">56 new</span> &middot;
+  0 still active &middot;
+  0 stale &middot;
+  5 dropped off
 </p>
-<h2>Jamaica property watch — 2026-05-06</h2>
-<p class="meta">
-  5 new since last run, 0 still active, 0 stale, 2 dropped off.<br>
-  FX rate used: 1 USD = 157.50 JMD.
-</p>
 
 
-<h3>Upton Estate Golf & Country Club</h3>
+<nav class="region-jump" aria-label="region jump">
+  
+    
+    <a class="region-chip has-new" href="#region-upton">
+      Upton Estate Golf & Country Club <span class="region-chip-count">+10</span>
+    </a>
+    
+  
+    
+    <span class="region-chip region-chip-empty" title="no listings tracked yet">Duncans (Trelawny)</span>
+    
+  
+    
+    <a class="region-chip has-new" href="#region-discovery_bay">
+      Discovery Bay <span class="region-chip-count">+9</span>
+    </a>
+    
+  
+    
+    <a class="region-chip has-new" href="#region-runaway_bay">
+      Runaway Bay / Cardiff Hall <span class="region-chip-count">+11</span>
+    </a>
+    
+  
+    
+    <a class="region-chip has-new" href="#region-mammee_bay">
+      Mammee Bay <span class="region-chip-count">+21</span>
+    </a>
+    
+  
+    
+    <a class="region-chip has-new" href="#region-port_antonio">
+      Port Antonio (Portland) <span class="region-chip-count">+3</span>
+    </a>
+    
+  
+    
+    <span class="region-chip region-chip-empty" title="no listings tracked yet">Negril</span>
+    
+  
+    
+    <a class="region-chip has-new" href="#region-moneague">
+      Moneague <span class="region-chip-count">+2</span>
+    </a>
+    
+  
+</nav>
 
 
-<h4 class="section-header">🏠 Homes<span class="section-budget">(budget $800,000 USD)</span></h4>
+
+<section class="region" id="region-upton">
+  <div class="region-header">
+    <h2>Upton Estate Golf & Country Club</h2>
+    <div class="region-stats">
+      <span class="count-new">10 new</span> &middot; 
+      0 active
+    </div>
+  </div>
+
+  
+  <div class="subsection">
+    <h3>🏠 Homes<span class="budget">≤ $800,000 USD</span></h3>
+
+    
+      <ul class="listings">
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Ocho+Rios/MLS-99207" tabindex="-1"><img class="card-thumb" src="https://caribbeanrealestatemls.com/media/property/photo/medium/01/b4/01b4ac50-858d-4dbb-8eb4-e9cb245a5144.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$500,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Ocho+Rios/MLS-99207">6 Bedroom Home for Sale, Plantation Village, Ocho Rios, St Ann, Jamaica</a></p>
+            
+            <div class="card-loc card-loc-approx">Ocho Rios St Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span class="also-at">also at:
+                <a href="https://caribbeanrealestatemls.com/real-estate/ocho-rios-st-ann/e900d8-6-bedroom-home-for-sale-plantation-village-ocho-rios-st-ann-jamaica/">caribbean_mls</a>
+              </span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://caribbeanrealestatemls.com/real-estate/ocho-rios-st-ann/6e06a2-3-bedroom-homes-for-sale-ocho-rios-country-club-jamaica/" tabindex="-1"><img class="card-thumb" src="https://caribbeanrealestatemls.com/media/property/photo/medium/36/81/3681fc96-833f-45de-a43e-ac965706806d.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$301,346 USD</span>
+            </div>
+            <p class="card-title"><a href="https://caribbeanrealestatemls.com/real-estate/ocho-rios-st-ann/6e06a2-3-bedroom-homes-for-sale-ocho-rios-country-club-jamaica/">3 Bedroom Homes for Sale, Ocho Rios Country Club, Jamaica</a></p>
+            
+            <div class="card-loc card-loc-approx">Ocho Rios St Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">caribbean_mls</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Ocho+Rios/MLS-97102" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/ef617ac30e5d8bf8ccd1e5d62d081229.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              
+              <span class="card-price">$750,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Ocho+Rios/MLS-97102">House — Milford Ridge , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Milford Ridge , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Breadnut+Hill/MLS-93809" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/f74b5de2d4368fae114c8425a7b60951.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$625,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Breadnut+Hill/MLS-93809">House — Wong Road , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Wong Road , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+James++Rose+Hall/MLS-91071" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/6696620c7fc534c83183dd6e7a838f57.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$645,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+James++Rose+Hall/MLS-91071">Residential Lot — The Greens, Rose Hall , St. James</a></p>
+            
+            <div class="card-loc card-loc-approx">The Greens, Rose Hall , St. James</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Eltham/MLS-93923" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/74c6696ddcc0f83f45b29ba2b136f57a.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              
+              <span class="card-price">$590,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Eltham/MLS-93923">House — Eltham Close , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Eltham Close , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++St-dot-+Ann%27s+Bay/MLS-97554" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/199b452bf39ec95cbe68b5844375f0d6.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$550,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++St-dot-+Ann%27s+Bay/MLS-97554">House — Drax Hall Country Club, S , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Drax Hall Country Club, S , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-54730" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/36e37bdc78e8a72e24f8ec9ec0129807.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$515,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-54730">Resort Apartment/Villa — Dairy Road , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Dairy Road , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-42227" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/9e977ea5c7a03cadd832ca3f9aea288a.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$505,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-42227">Resort Apartment/Villa — Dairy Road , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Dairy Road , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-42226" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/7aff8c5a9f2a232f6edac763443a409f.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$505,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-42226">Resort Apartment/Villa — Dairy Road , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Dairy Road , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+      </ul>
+    
+
+    
+
+    
+
+    
+  </div>
+  
+  <div class="subsection">
+    <h3>🌿 Land<span class="budget">≤ $350,000 USD</span></h3>
+
+    
+      <p class="empty-line">No new land this run.</p>
+    
+
+    
+
+    
+
+    
+  </div>
+  
+</section>
+
+<section class="region" id="region-discovery_bay">
+  <div class="region-header">
+    <h2>Discovery Bay</h2>
+    <div class="region-stats">
+      <span class="count-new">9 new</span> &middot; 
+      0 active &middot; 2 dropped
+    </div>
+  </div>
+
+  
+  <div class="subsection">
+    <h3>🏠 Homes<span class="budget">≤ $800,000 USD</span></h3>
+
+    
+      <ul class="listings">
+      
+        <li class="card is-new is-boost">
+          
+          <div class="card-thumb-empty"></div>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$411,103 USD</span>
+            </div>
+            <p class="card-title"><a href="https://www.realtor.com/international/jm/top-hill-road-unit-1-runaway-bay-st-ann-parish-310107813198/">Apartment — TOP HILL ROAD unit: 1, Runaway Bay, St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">TOP HILL ROAD unit: 1, Runaway Bay, St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">realtor_com_intl</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-98600" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/a0f46bbd051e68c46b91cbcc61e7a791.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$8,255 USD (was CAD
+                                $1,300,000)</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-98600">House — Mount Boon Discovery Bay , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Mount Boon Discovery Bay , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-88529" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/e2b77d2199b2c4c86bc9f56da254436b.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$698,472 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-88529">Apartment — Dairy Road, Discovery Bay , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Dairy Road, Discovery Bay , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Tripoli/MLS-91489" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/c538e7ef0ebf2c21cf93b1a292d96b95.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$650,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Tripoli/MLS-91489">House — Rupert Wilmot Drive, Trip , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Rupert Wilmot Drive, Trip , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Runaway+Bay/MLS-93001" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/c104a49d91b45db2892c659a9fc6d178.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$595,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Runaway+Bay/MLS-93001">House — Part Of Mount Plesant , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Part Of Mount Plesant , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Runaway+Bay/MLS-87205" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/892b55f17956ef8c60f4228ae5f738d2.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$563,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Runaway+Bay/MLS-87205">Townhouse — Cardiff Hall Plantation , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Cardiff Hall Plantation , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-88575" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/abd166ba13e837cab14512c24e7c07ac.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$535,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-88575">Apartment — Dairy Road, Discovery Bay , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Dairy Road, Discovery Bay , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Runaway+Bay/MLS-77963" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/6c0253be26dfc77dc8a2f06b86f4347a.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$526,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Runaway+Bay/MLS-77963">Resort Apartment/Villa — Bahari At Runaway Bay , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Bahari At Runaway Bay , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-88576" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/11a7bb990a7f9cf4a2a3fe000e36e87e.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$500,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-88576">Apartment — Dairy Road, Discovery Bay , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Dairy Road, Discovery Bay , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+      </ul>
+    
+
+    
+
+    
+
+    
+    <details>
+      <summary>1 dropped off this run</summary>
+      <ul class="compact-list">
+        
+        <li>
+          <span class="price">$222,882 USD</span>
+          <span class="dropped-title">House — CLARKE STREET, Browns Town, St. Ann</span>
+          <span class="src-pill">realtor_com_intl</span>
+          <span class="age">URL likely 404</span>
+        </li>
+        
+      </ul>
+    </details>
+    
+  </div>
+  
+  <div class="subsection">
+    <h3>🌿 Land<span class="budget">≤ $350,000 USD</span></h3>
+
+    
+      <p class="empty-line">No new land this run.</p>
+    
+
+    
+
+    
+
+    
+    <details>
+      <summary>1 dropped off this run</summary>
+      <ul class="compact-list">
+        
+        <li>
+          <span class="price">$70,049 USD</span>
+          <span class="dropped-title">Land — CLARKE STREET, Browns Town, St. Ann</span>
+          <span class="src-pill">realtor_com_intl</span>
+          <span class="age">URL likely 404</span>
+        </li>
+        
+      </ul>
+    </details>
+    
+  </div>
+  
+</section>
+
+<section class="region" id="region-runaway_bay">
+  <div class="region-header">
+    <h2>Runaway Bay / Cardiff Hall</h2>
+    <div class="region-stats">
+      <span class="count-new">11 new</span> &middot; 
+      0 active &middot; 2 dropped
+    </div>
+  </div>
+
+  
+  <div class="subsection">
+    <h3>🏠 Homes<span class="budget">≤ $800,000 USD</span></h3>
+
+    
+      <ul class="listings">
+      
+        <li class="card is-new is-boost">
+          
+          <div class="card-thumb-empty"></div>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$411,103 USD</span>
+            </div>
+            <p class="card-title"><a href="https://www.realtor.com/international/jm/top-hill-road-unit-1-runaway-bay-st-ann-parish-310107813198/">Apartment — TOP HILL ROAD unit: 1, Runaway Bay, St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">TOP HILL ROAD unit: 1, Runaway Bay, St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">realtor_com_intl</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-98600" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/a0f46bbd051e68c46b91cbcc61e7a791.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$8,255 USD (was CAD
+                                $1,300,000)</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-98600">House — Mount Boon Discovery Bay , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Mount Boon Discovery Bay , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-88529" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/e2b77d2199b2c4c86bc9f56da254436b.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$698,472 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-88529">Apartment — Dairy Road, Discovery Bay , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Dairy Road, Discovery Bay , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Tripoli/MLS-91489" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/c538e7ef0ebf2c21cf93b1a292d96b95.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$650,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Tripoli/MLS-91489">House — Rupert Wilmot Drive, Trip , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Rupert Wilmot Drive, Trip , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Runaway+Bay/MLS-93001" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/c104a49d91b45db2892c659a9fc6d178.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$595,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Runaway+Bay/MLS-93001">House — Part Of Mount Plesant , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Part Of Mount Plesant , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Runaway+Bay/MLS-93599" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/fcc978ddf87396165cc6e26974c2e66f.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$575,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Runaway+Bay/MLS-93599">House — Panorama Cl, Cardiff Hall , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Panorama Cl, Cardiff Hall , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Runaway+Bay/MLS-87205" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/892b55f17956ef8c60f4228ae5f738d2.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$563,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Runaway+Bay/MLS-87205">Townhouse — Cardiff Hall Plantation , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Cardiff Hall Plantation , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-88575" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/abd166ba13e837cab14512c24e7c07ac.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$535,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-88575">Apartment — Dairy Road, Discovery Bay , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Dairy Road, Discovery Bay , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Runaway+Bay/MLS-77963" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/6c0253be26dfc77dc8a2f06b86f4347a.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$526,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Runaway+Bay/MLS-77963">Resort Apartment/Villa — Bahari At Runaway Bay , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Bahari At Runaway Bay , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Runaway+Bay/MLS-95112" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/a34c8590505f4672538c1740d3cafec3.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$507,979 USD (was JMD
+                                $80,000,000)</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Runaway+Bay/MLS-95112">House — Cardiff Hall , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Cardiff Hall , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-88576" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/11a7bb990a7f9cf4a2a3fe000e36e87e.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$500,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Discovery+Bay/MLS-88576">Apartment — Dairy Road, Discovery Bay , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Dairy Road, Discovery Bay , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+      </ul>
+    
+
+    
+
+    
+
+    
+    <details>
+      <summary>1 dropped off this run</summary>
+      <ul class="compact-list">
+        
+        <li>
+          <span class="price">$222,882 USD</span>
+          <span class="dropped-title">House — CLARKE STREET, Browns Town, St. Ann</span>
+          <span class="src-pill">realtor_com_intl</span>
+          <span class="age">URL likely 404</span>
+        </li>
+        
+      </ul>
+    </details>
+    
+  </div>
+  
+  <div class="subsection">
+    <h3>🌿 Land<span class="budget">≤ $350,000 USD</span></h3>
+
+    
+      <p class="empty-line">No new land this run.</p>
+    
+
+    
+
+    
+
+    
+    <details>
+      <summary>1 dropped off this run</summary>
+      <ul class="compact-list">
+        
+        <li>
+          <span class="price">$70,049 USD</span>
+          <span class="dropped-title">Land — CLARKE STREET, Browns Town, St. Ann</span>
+          <span class="src-pill">realtor_com_intl</span>
+          <span class="age">URL likely 404</span>
+        </li>
+        
+      </ul>
+    </details>
+    
+  </div>
+  
+</section>
+
+<section class="region" id="region-mammee_bay">
+  <div class="region-header">
+    <h2>Mammee Bay</h2>
+    <div class="region-stats">
+      <span class="count-new">21 new</span> &middot; 
+      0 active &middot; 1 dropped
+    </div>
+  </div>
+
+  
+  <div class="subsection">
+    <h3>🏠 Homes<span class="budget">≤ $800,000 USD</span></h3>
+
+    
+      <ul class="listings">
+      
+        <li class="card is-new is-boost">
+          
+          <div class="card-thumb-empty"></div>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$2,750 USD</span>
+            </div>
+            <p class="card-title"><a href="https://www.realtor.com/international/jm/paradisiac-beach-club-unit-294-st-ann-s-bay-st-ann-parish-310107812634/">Townhouse — PARADISIAC BEACH CLUB unit: 294, St. Ann's Bay, St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">PARADISIAC BEACH CLUB unit: 294, St. Ann's Bay, St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">realtor_com_intl</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Ocho+Rios/MLS-99207" tabindex="-1"><img class="card-thumb" src="https://caribbeanrealestatemls.com/media/property/photo/medium/01/b4/01b4ac50-858d-4dbb-8eb4-e9cb245a5144.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$500,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Ocho+Rios/MLS-99207">6 Bedroom Home for Sale, Plantation Village, Ocho Rios, St Ann, Jamaica</a></p>
+            
+            <div class="card-loc card-loc-approx">Ocho Rios St Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span class="also-at">also at:
+                <a href="https://caribbeanrealestatemls.com/real-estate/ocho-rios-st-ann/e900d8-6-bedroom-home-for-sale-plantation-village-ocho-rios-st-ann-jamaica/">caribbean_mls</a>
+              </span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://caribbeanrealestatemls.com/real-estate/ocho-rios-st-ann/6e06a2-3-bedroom-homes-for-sale-ocho-rios-country-club-jamaica/" tabindex="-1"><img class="card-thumb" src="https://caribbeanrealestatemls.com/media/property/photo/medium/36/81/3681fc96-833f-45de-a43e-ac965706806d.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$301,346 USD</span>
+            </div>
+            <p class="card-title"><a href="https://caribbeanrealestatemls.com/real-estate/ocho-rios-st-ann/6e06a2-3-bedroom-homes-for-sale-ocho-rios-country-club-jamaica/">3 Bedroom Homes for Sale, Ocho Rios Country Club, Jamaica</a></p>
+            
+            <div class="card-loc card-loc-approx">Ocho Rios St Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">caribbean_mls</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Laughlands/MLS-92852" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/c3395318e833de70fd97f5ee5669a064.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              
+              <span class="card-price">$800,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Laughlands/MLS-92852">Resort Apartment/Villa — Llandovery St Ann , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Llandovery St Ann , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Ocho+Rios/MLS-97102" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/ef617ac30e5d8bf8ccd1e5d62d081229.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              
+              <span class="card-price">$750,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Ocho+Rios/MLS-97102">House — Milford Ridge , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Milford Ridge , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Mammee+Bay/MLS-96295" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/950e489c54c7b26a08a1fbb3fa811026.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$750,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Mammee+Bay/MLS-96295">Apartment — Mammee Bay , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Mammee Bay , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Drax+Hall+Estate/MLS-90957" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/d37ed7e61b0d60dee4e829c2953b4651.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$750,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Drax+Hall+Estate/MLS-90957">House — Marina Estate , Draxhall , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Marina Estate , Draxhall , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Mammee+Bay/MLS-96431" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/66120e09235b04d85f4ae76f8b293101.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$735,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Mammee+Bay/MLS-96431">Apartment — Tropix, Mammee Bay, St. A , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Tropix, Mammee Bay, St. A , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Breadnut+Hill/MLS-93809" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/f74b5de2d4368fae114c8425a7b60951.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$625,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Breadnut+Hill/MLS-93809">House — Wong Road , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Wong Road , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Mammee+Bay/MLS-96429" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/3ed62e7a7eebc0bdd0b5c69c5d5ffb22.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$695,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Mammee+Bay/MLS-96429">Apartment — Tropix, Mammee Bay, St. A , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Tropix, Mammee Bay, St. A , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Laughlands/MLS-93175" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/495b8a23672f8afc9012d6a99a9f93cb.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              
+              <span class="card-price">$655,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Laughlands/MLS-93175">House — Llandovery St Ann , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Llandovery St Ann , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Mammee+Bay/MLS-96677" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/fc1ff2f90bdedd1f0243f75d113fa497.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$625,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Mammee+Bay/MLS-96677">Apartment — Old Main Road, Mammee Bay , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Old Main Road, Mammee Bay , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Mammee+Bay/MLS-96427" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/4e225db8d93fb64d4faf887c3e9f12c0.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$615,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Mammee+Bay/MLS-96427">Apartment — Tropix, Mammee Bay, St. A , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Tropix, Mammee Bay, St. A , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Eltham/MLS-93923" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/74c6696ddcc0f83f45b29ba2b136f57a.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              
+              <span class="card-price">$590,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Eltham/MLS-93923">House — Eltham Close , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Eltham Close , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Laughlands/MLS-92738" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/e473c484c35c7dabe7db71bd4a65b919.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              
+              <span class="card-price">$585,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Laughlands/MLS-92738">Townhouse — Llandovery St Ann , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Llandovery St Ann , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Drax+Hall+Estate/MLS-79067" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/357e04d374acf0bf44a60584087aa118.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$430,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Drax+Hall+Estate/MLS-79067">House — Drax Hall Estate , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Drax Hall Estate , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Mammee+Bay/MLS-96675" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/3a0ba9746f82c81bf38d31f058cff9f8.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$565,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Mammee+Bay/MLS-96675">Apartment — Old Main Road, Mammee Bay , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Old Main Road, Mammee Bay , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Drax+Hall+Estate/MLS-98558" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/5b7f1d240fa2493fefe61f3338003966.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$550,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Drax+Hall+Estate/MLS-98558">House — Genova Drive Drax Hall St , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Genova Drive Drax Hall St , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Richmond/MLS-90592" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/508d737cb0e4fbaaecf45363c441552e.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              
+              <span class="card-price">$399,500 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Richmond/MLS-90592">House — Lignum Vitae Avenue , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Lignum Vitae Avenue , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Mammee+Bay/MLS-96676" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/ccbfdcc59608633bbc2aa2117036b9b0.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$530,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Mammee+Bay/MLS-96676">Apartment — Old Main Road, Mammee Bay , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Old Main Road, Mammee Bay , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Mammee+Bay/MLS-96674" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/2f9516d4578f9655cc21947fdc99c9ee.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$510,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Mammee+Bay/MLS-96674">Apartment — Old Main Road, Mammee Bay , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Old Main Road, Mammee Bay , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+      </ul>
+    
+
+    
+
+    
+
+    
+  </div>
+  
+  <div class="subsection">
+    <h3>🌿 Land<span class="budget">≤ $350,000 USD</span></h3>
+
+    
+      <p class="empty-line">No new land this run.</p>
+    
+
+    
+
+    
+
+    
+    <details>
+      <summary>1 dropped off this run</summary>
+      <ul class="compact-list">
+        
+        <li>
+          <span class="price">$240,000 USD</span>
+          <span class="dropped-title">Land — KENMEY ROAD lot: 70, Mammee Bay Estate, St. Ann</span>
+          <span class="src-pill">realtor_com_intl</span>
+          <span class="age">URL likely 404</span>
+        </li>
+        
+      </ul>
+    </details>
+    
+  </div>
+  
+</section>
+
+<section class="region" id="region-port_antonio">
+  <div class="region-header">
+    <h2>Port Antonio (Portland)</h2>
+    <div class="region-stats">
+      <span class="count-new">3 new</span> &middot; 
+      0 active
+    </div>
+  </div>
+
+  
+  <div class="subsection">
+    <h3>🏠 Homes<span class="budget">≤ $800,000 USD</span></h3>
+
+    
+      <ul class="listings">
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/Portland++Boston/MLS-100905" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/22df0068f501aea22feb2293907dcaa3.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$673,458 USD (was JMD
+                                $106,060,702)</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/Portland++Boston/MLS-100905">Resort Apartment/Villa — Boston, Fairy Hill , Portland</a></p>
+            
+            <div class="card-loc card-loc-approx">Boston, Fairy Hill , Portland</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/Portland++Port+Antonio/MLS-91838" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/7a47fc1ab270c2fb99d942441cdb3c50.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$575,000 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/Portland++Port+Antonio/MLS-91838">House — Dolphin Bay , Portland</a></p>
+            
+            <div class="card-loc card-loc-approx">Dolphin Bay , Portland</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/Portland++Little+Spring+Garden/MLS-90664" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/442cbcb81e45de9a03d7e3269561137b.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$507,979 USD</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/Portland++Little+Spring+Garden/MLS-90664">House — Portland, St.margaret's B , Portland</a></p>
+            
+            <div class="card-loc card-loc-approx">Portland, St.margaret's B , Portland</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+      </ul>
+    
+
+    
+
+    
+
+    
+  </div>
+  
+  <div class="subsection">
+    <h3>🌿 Land<span class="budget">≤ $350,000 USD</span></h3>
+
+    
+      <p class="empty-line">No new land this run.</p>
+    
+
+    
+
+    
+
+    
+  </div>
+  
+</section>
+
+<section class="region" id="region-moneague">
+  <div class="region-header">
+    <h2>Moneague</h2>
+    <div class="region-stats">
+      <span class="count-new">2 new</span> &middot; 
+      0 active
+    </div>
+  </div>
+
+  
+  <div class="subsection">
+    <h3>🏠 Homes<span class="budget">≤ $800,000 USD</span></h3>
+
+    
+      <ul class="listings">
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://remax-elite.com.jm/property/St-dot-+Ann++Moneague/MLS-93672" tabindex="-1"><img class="card-thumb" src="https://d1p6c8qwy766j6.cloudfront.net/storage/89d6712786eb636255f325eee6a831ae.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$539,728 USD (was JMD
+                                $85,000,000)</span>
+            </div>
+            <p class="card-title"><a href="https://remax-elite.com.jm/property/St-dot-+Ann++Moneague/MLS-93672">House — Moneague, St. Ann , St. Ann</a></p>
+            
+            <div class="card-loc card-loc-approx">Moneague, St. Ann , St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">remax_elite</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+        <li class="card is-new is-boost">
+          
+          <a class="card-thumb-link" href="https://jamaica.xposureapp.com/portal/jamaica/InteractiveLink?u=24481&l=98806&t=mls&h=W81KOPPavn9xxf1NmEQFtx8yKrA%3D&pl=true" tabindex="-1"><img class="card-thumb" src="https://images.realtyserver.com/photo_server.php?btnSubmit=GetPhoto&board=jamaica&name=000181F6.L01&failover=portal_Blank.gif" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
+          
+          <div class="card-body">
+            <div class="card-line1">
+              <span class="pill pill-new">New</span>
+              <span class="pill-boost" title="matches boost keywords">⭐</span>
+              <span class="card-price">$329,464 USD (was JMD $51,886,215)</span>
+            </div>
+            <p class="card-title"><a href="https://jamaica.xposureapp.com/portal/jamaica/InteractiveLink?u=24481&l=98806&t=mls&h=W81KOPPavn9xxf1NmEQFtx8yKrA%3D&pl=true">[Active] 1- MONEAGUE</a></p>
+            
+            <div class="card-loc">Moneague, St. Ann</div>
+            
+            <div class="card-meta">
+              <span class="src-pill">xposure</span>
+              
+              <span>first seen today</span>
+            </div>
+          </div>
+        </li>
+      
+      </ul>
+    
+
+    
+
+    
+
+    
+  </div>
+  
+  <div class="subsection">
+    <h3>🌿 Land<span class="budget">≤ $350,000 USD</span></h3>
+
+    
+      <p class="empty-line">No new land this run.</p>
+    
+
+    
+
+    
+
+    
+  </div>
+  
+</section>
 
 
-<p><em>No new listings since last run.</em></p>
 
-
-
-
-
-
-
-<details><summary>⚠️ Dropped off since last run (1)</summary>
-<ul>
-
-  <li>$499,000 USD &mdash; Apartment — A28 SANDCASTLE RESORT unit: A28, Ocho Rios, St. Ann</li>
-
-</ul>
+<details class="quiet-note">
+  <summary>2 quiet regions (no listings tracked yet)</summary>
+  <ul><li>Duncans (Trelawny)</li><li>Negril</li></ul>
 </details>
 
 
-
-<h4 class="section-header">🌿 Land<span class="section-budget">(budget $350,000 USD)</span></h4>
-
-
-<p><em>No new listings since last run.</em></p>
-
-
-
-
-
-
-
-<details><summary>⚠️ Dropped off since last run (1)</summary>
-<ul>
-
-  <li>$123,000 USD &mdash; Land — 180 HILLS OF BOSCOBEL, BOSCOB, Boscobel Heights, St. Mary</li>
-
-</ul>
-</details>
-
-
-
-
-<h3>Duncans (Trelawny)</h3>
-
-
-<h4 class="section-header">🏠 Homes<span class="section-budget">(budget $800,000 USD)</span></h4>
-
-
-<p><em>No new listings since last run.</em></p>
-
-
-
-
-
-
-
-
-
-<h4 class="section-header">🌿 Land<span class="section-budget">(budget $350,000 USD)</span></h4>
-
-
-<p><em>No new listings since last run.</em></p>
-
-
-
-
-
-
-
-
-
-
-<h3>Discovery Bay</h3>
-
-
-<h4 class="section-header">🏠 Homes<span class="section-budget">(budget $800,000 USD)</span></h4>
-
-
-<h5 style="color:#0a7;">🆕 New since last run (1)</h5>
-<ul>
-
-  <li class="listing-row">
-    <div class="listing-thumb"></div>
-    <div class="listing-body">
-      
-      <strong>$222,882 USD</strong> &mdash; House — CLARKE STREET, Browns Town, St. Ann
-      <span class="meta"> &middot; CLARKE STREET, Browns Town, St. Ann</span>
-      <span class="approx"> &middot; (approximate location)</span>
-      <br>
-      <a href="https://www.realtor.com/international/jm/clarke-street-browns-town-st-ann-parish-310107791745/">https://www.realtor.com/international/jm/clarke-street-browns-town-st-ann-par...</a>
-      <span class="src-tag"> [realtor_com_intl]</span>
-      
-      <span class="note">first seen: 2026-05-06T15:26:40.652282+00:00</span>
-    </div>
-  </li>
-
-</ul>
-
-
-
-
-
-
-
-
-
-<h4 class="section-header">🌿 Land<span class="section-budget">(budget $350,000 USD)</span></h4>
-
-
-<h5 style="color:#0a7;">🆕 New since last run (1)</h5>
-<ul>
-
-  <li class="listing-row">
-    <div class="listing-thumb"></div>
-    <div class="listing-body">
-      
-      <strong>$70,049 USD</strong> &mdash; Land — CLARKE STREET, Browns Town, St. Ann
-      <span class="meta"> &middot; CLARKE STREET, Browns Town, St. Ann</span>
-      <span class="approx"> &middot; (approximate location)</span>
-      <br>
-      <a href="https://www.realtor.com/international/jm/clarke-street-browns-town-st-ann-parish-310107791805/">https://www.realtor.com/international/jm/clarke-street-browns-town-st-ann-par...</a>
-      <span class="src-tag"> [realtor_com_intl]</span>
-      
-      <span class="note">first seen: 2026-05-06T15:26:40.652282+00:00</span>
-    </div>
-  </li>
-
-</ul>
-
-
-
-
-
-
-
-
-
-
-<h3>Runaway Bay / Cardiff Hall</h3>
-
-
-<h4 class="section-header">🏠 Homes<span class="section-budget">(budget $800,000 USD)</span></h4>
-
-
-<h5 style="color:#0a7;">🆕 New since last run (1)</h5>
-<ul>
-
-  <li class="listing-row">
-    <div class="listing-thumb"></div>
-    <div class="listing-body">
-      
-      <strong>$222,882 USD</strong> &mdash; House — CLARKE STREET, Browns Town, St. Ann
-      <span class="meta"> &middot; CLARKE STREET, Browns Town, St. Ann</span>
-      <span class="approx"> &middot; (approximate location)</span>
-      <br>
-      <a href="https://www.realtor.com/international/jm/clarke-street-browns-town-st-ann-parish-310107791745/">https://www.realtor.com/international/jm/clarke-street-browns-town-st-ann-par...</a>
-      <span class="src-tag"> [realtor_com_intl]</span>
-      
-      <span class="note">first seen: 2026-05-06T15:26:40.652282+00:00</span>
-    </div>
-  </li>
-
-</ul>
-
-
-
-
-
-
-
-
-
-<h4 class="section-header">🌿 Land<span class="section-budget">(budget $350,000 USD)</span></h4>
-
-
-<h5 style="color:#0a7;">🆕 New since last run (1)</h5>
-<ul>
-
-  <li class="listing-row">
-    <div class="listing-thumb"></div>
-    <div class="listing-body">
-      
-      <strong>$70,049 USD</strong> &mdash; Land — CLARKE STREET, Browns Town, St. Ann
-      <span class="meta"> &middot; CLARKE STREET, Browns Town, St. Ann</span>
-      <span class="approx"> &middot; (approximate location)</span>
-      <br>
-      <a href="https://www.realtor.com/international/jm/clarke-street-browns-town-st-ann-parish-310107791805/">https://www.realtor.com/international/jm/clarke-street-browns-town-st-ann-par...</a>
-      <span class="src-tag"> [realtor_com_intl]</span>
-      
-      <span class="note">first seen: 2026-05-06T15:26:40.652282+00:00</span>
-    </div>
-  </li>
-
-</ul>
-
-
-
-
-
-
-
-
-
-
-<h3>Mammee Bay</h3>
-
-
-<h4 class="section-header">🏠 Homes<span class="section-budget">(budget $800,000 USD)</span></h4>
-
-
-<p><em>No new listings since last run.</em></p>
-
-
-
-
-
-
-
-
-
-<h4 class="section-header">🌿 Land<span class="section-budget">(budget $350,000 USD)</span></h4>
-
-
-<h5 style="color:#0a7;">🆕 New since last run (1)</h5>
-<ul>
-
-  <li class="listing-row">
-    <div class="listing-thumb"></div>
-    <div class="listing-body">
-      ⭐ 
-      <strong>$240,000 USD</strong> &mdash; Land — KENMEY ROAD lot: 70, Mammee Bay Estate, St. Ann
-      <span class="meta"> &middot; KENMEY ROAD lot: 70, Mammee Bay Estate, St. Ann</span>
-      <span class="approx"> &middot; (inferred location)</span>
-      <br>
-      <a href="https://www.realtor.com/international/jm/kenmey-road-lot-70-mammee-bay-estate-st-ann-parish-310107811369/">https://www.realtor.com/international/jm/kenmey-road-lot-70-mammee-bay-estate...</a>
-      <span class="src-tag"> [realtor_com_intl]</span>
-      
-      <span class="note">first seen: 2026-05-06T15:26:40.652282+00:00</span>
-    </div>
-  </li>
-
-</ul>
-
-
-
-
-
-
-
-
-
-
-<h3>Port Antonio (Portland)</h3>
-
-
-<h4 class="section-header">🏠 Homes<span class="section-budget">(budget $800,000 USD)</span></h4>
-
-
-<p><em>No new listings since last run.</em></p>
-
-
-
-
-
-
-
-
-
-<h4 class="section-header">🌿 Land<span class="section-budget">(budget $350,000 USD)</span></h4>
-
-
-<p><em>No new listings since last run.</em></p>
-
-
-
-
-
-
-
-
-
-
-
-<hr>
-<p class="note">
-  Generated 2026-05-06T15:26:40.652282+00:00.
+<footer class="footer">
+  Generated 2026-05-07T15:27:53.189257+00:00.<br>
   
-  Per-source counts: realtor_com_intl=18, cb_jamaica=8, caribbean_mls=12, millennium=85, golden_gates=102, century21_jm=5, xposure=1.
+  Per-source counts:
+  realtor_com_intl=19 &middot; cb_jamaica=8 &middot; caribbean_mls=12 &middot; millennium=86 &middot; golden_gates=102 &middot; century21_jm=176 &middot; remax_elite=1014 &middot; xposure=1.
   
   
-</p>
+</footer>
+
 </body>
 </html>

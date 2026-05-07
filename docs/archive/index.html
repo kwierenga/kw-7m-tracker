@@ -6,14 +6,36 @@
 <meta name="robots" content="noindex,nofollow">
 <title>Property watch &mdash; archive</title>
 <style>
-  body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 600px; margin: 2em auto; padding: 0 1em; }
-  a { color: #06a; }
+  :root {
+    --bg: #fafaf6; --surface: #ffffff; --text: #1c1c1c; --text-faint: #8a8a8a;
+    --border: #e6e3da; --link: #0a5a8d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15181a; --surface: #1e2123; --text: #ececec; --text-faint: #7a7a7a;
+      --border: #353a3d; --link: #6db8ee;
+    }
+  }
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    max-width: 600px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem;
+    line-height: 1.6;
+  }
+  a { color: var(--link); }
+  h1 { font-size: 1.4rem; margin: 0 0 1rem; letter-spacing: -0.01em; }
+  .back { color: var(--text-faint); font-size: 0.85rem; }
+  ul { list-style: none; padding: 0; margin: 1rem 0 0; }
+  li { padding: 0.5rem 0; border-bottom: 1px dashed var(--border); }
+  li:last-child { border-bottom: 0; }
 </style>
 </head>
 <body>
-<p><a href="../">&larr; latest</a></p>
-<h2>Past digests</h2>
+<p><a class="back" href="../">&larr; latest</a></p>
+<h1>Past digests</h1>
 <ul>
+
+  <li><a href="2026-05-07.html">2026-05-07</a></li>
 
   <li><a href="2026-05-06.html">2026-05-06</a></li>
 
