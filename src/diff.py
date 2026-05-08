@@ -1,11 +1,11 @@
 """Decide which listings count as 'new since last run', 'still active', 'stale', 'dropped off'.
 
 Definition of 'new': we discovered the listing within the last RECENTLY_NEW_DAYS
-days (anchored on first_seen_iso). A 3-day window means a fresh hit stays
-flagged as 'new' across a few daily digests, so the user has a few mornings
-to notice it instead of one. The previous rule retired hits the day after
-they were first seen, which under daily cadence felt too aggressive — a
-listing first seen on Monday vanished from 'new' on Tuesday.
+days (anchored on first_seen_iso). A 7-day window means a fresh hit stays
+flagged as 'new' for a full week of daily digests, so the user has plenty of
+mornings to notice it. The previous rule retired hits the day after they
+were first seen, which under daily cadence felt too aggressive — a listing
+first seen on Monday vanished from 'new' on Tuesday.
 
 The source's own listed_on date is no longer used to flag 'new' (a listing's
 visibility to the user is what matters, not the source's publication date).
@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 STALE_DAYS = 90
-RECENTLY_NEW_DAYS = 3
+RECENTLY_NEW_DAYS = 7
 
 
 @dataclass
