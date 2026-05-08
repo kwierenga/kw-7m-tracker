@@ -183,7 +183,5 @@ When committing saved HTML as test fixtures, GitHub push protection blocks the p
 
 ## Outstanding work
 
-- Detail-page fetching for accurate listed-on dates + beds/baths/sqft (biggest accuracy gain for "new since last run")
-- Map view (Leaflet + OpenStreetMap) showing each listing relative to the regions
-- Price-drop tracking day-over-day
+- Detail-page fetching for accurate beds/baths/sqft (listed-on done; beds/baths/sqft is the next accuracy win)
 - Manual paste-in ingest for Facebook Marketplace listings (same pattern as xposure_urls.txt)

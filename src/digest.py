@@ -113,6 +113,13 @@ PAGE_TEMPLATE = Template(
     margin: 0 0 1.5rem;
   }
   .count-new { color: var(--accent); font-weight: 700; }
+  .count-drops { color: var(--accent); font-weight: 700; }
+  .price-was {
+    color: var(--accent);
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
 
   .region-jump {
     display: flex;
@@ -459,6 +466,7 @@ PAGE_TEMPLATE = Template(
 <h1>Jamaica property watch</h1>
 <p class="summary">
   <span class="count-new">{{ total_new }} new</span> &middot;
+  {% if total_drops %}<span class="count-drops">↓ {{ total_drops }} price drop{{ '' if total_drops == 1 else 's' }}</span> &middot;{% endif %}
   {{ total_active }} still active &middot;
   {{ total_stale }} stale &middot;
   {{ total_dropped }} dropped off
@@ -512,6 +520,7 @@ PAGE_TEMPLATE = Template(
               <span class="pill pill-new">New</span>
               {% if L.keyword_boost %}<span class="pill-boost" title="matches boost keywords">⭐</span>{% endif %}
               <span class="card-price">{{ L.price_label }}</span>
+              {% if L.price_was_label %}<span class="price-was">↓ {{ L.price_was_label }}</span>{% endif %}
             </div>
             <p class="card-title"><a href="{{ L.primary_url }}">{{ L.title }}</a></p>
             {% if L.location_text %}
@@ -548,6 +557,7 @@ PAGE_TEMPLATE = Template(
         {% for L in section.still_active %}
         <li{% if L.track_id %} data-id="{{ L.track_id }}"{% endif %}>
           <span class="price">{{ L.price_label }}</span>
+          {% if L.price_was_label %}<span class="price-was">↓ {{ L.price_was_label }}</span>{% endif %}
           <span class="row-title"><a href="{{ L.primary_url }}">{{ L.title|truncate(70) }}</a></span>
           {% if L.primary_source %}<span class="src-pill">{{ L.primary_source }}</span>{% endif %}
           {% if L.other_sources %}<span class="age">+{{ L.other_sources|length }} other</span>{% endif %}
@@ -847,7 +857,10 @@ def _relative_time(iso: str | None, now: datetime | None = None) -> str:
     return f"{years} year{'s' if years > 1 else ''} ago"
 
 
-def _row_to_view(row: dict) -> dict:
+def _row_to_view(
+    row: dict,
+    price_drops: dict[str, tuple[int, int]] | None = None,
+) -> dict:
     out = dict(row)
     sources = json.loads(row.get("sources_json") or "[]")
     urls = json.loads(row.get("urls_json") or "[]")
@@ -867,6 +880,12 @@ def _row_to_view(row: dict) -> dict:
     # Stable identity for client-side status tracking (localStorage keys).
     # canonical_id is preferred; stable_id is the legacy fallback.
     out["track_id"] = row.get("canonical_id") or row.get("stable_id") or ""
+    out["price_was_label"] = ""
+    if price_drops:
+        cid = row.get("canonical_id")
+        if cid and cid in price_drops:
+            old, _new = price_drops[cid]
+            out["price_was_label"] = f"was ${old:,} USD"
     return out
 
 
@@ -922,6 +941,7 @@ def build_digest(
     run_iso: str,
     notes: str = "",
     sources_counts: dict[str, int] | None = None,
+    price_drops: dict[str, tuple[int, int]] | None = None,
 ) -> tuple[str, str]:
     """Returns (page_title, html)."""
     by_region: dict[str, dict] = {}
@@ -930,7 +950,7 @@ def build_digest(
 
     def assign(rows: list[dict], key: str) -> None:
         for row in rows:
-            view = _row_to_view(row)
+            view = _row_to_view(row, price_drops=price_drops)
             slugs = regions_for(row) or [REGIONS[0].slug]
             pt = (row.get("property_type") or "unknown").lower()
             if pt not in PROPERTY_TYPE_ORDER:
@@ -970,6 +990,7 @@ def build_digest(
     total_active = sum(v["active_count"] for v in region_views)
     total_stale = sum(v["stale_count"] for v in region_views)
     total_dropped = sum(v["dropped_count"] for v in region_views)
+    total_drops = len(price_drops or {})
 
     date_label = date.today().isoformat()
     per_region_new = ", ".join(
@@ -991,6 +1012,7 @@ def build_digest(
         total_active=total_active,
         total_stale=total_stale,
         total_dropped=total_dropped,
+        total_drops=total_drops,
         sources_label=", ".join(sources) or "(none)",
         sources_counts=sources_counts or {},
         notes=notes,

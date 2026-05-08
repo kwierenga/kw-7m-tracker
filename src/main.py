@@ -16,6 +16,7 @@ from .fx import get_jmd_per_usd
 from .normalize import normalize_all
 from .store import (
     connect,
+    find_price_drops,
     listings_dropped_in_run,
     listings_seen_in_run,
     lookup_canonical_id,
@@ -108,6 +109,11 @@ def run(dry_run: bool) -> int:
         n_new_inserted, n_updated = upsert_listings(con, rows_for_db, run_iso)
         print(f"[store] inserted={n_new_inserted} updated={n_updated}")
 
+        # Computed AFTER upsert because upsert is what populates this run's
+        # price_history rows. Compares against the most recent prior entry.
+        price_drops = find_price_drops(con, run_iso)
+        print(f"[price] drops={len(price_drops)}")
+
         seen = listings_seen_in_run(con, run_iso)
         # Bug fix: only flag as dropped when ALL of a listing's sources scraped
         # successfully this run. Otherwise a transient failure spawns phantom
@@ -142,6 +148,7 @@ def run(dry_run: bool) -> int:
         run_iso=run_iso,
         notes="; ".join(notes_lines),
         sources_counts=sources_counts,
+        price_drops=price_drops,
     )
     print(f"[digest] {subject}")
 
@@ -174,8 +181,16 @@ def run(dry_run: bool) -> int:
         )
         return f"{total} {label} ({parts})"
 
+    drops_segment = (
+        f"{len(price_drops)} price drop{'' if len(price_drops) == 1 else 's'}"
+        if price_drops else None
+    )
     segments = [
-        s for s in (_segment(new_by_region, "new"), _segment(dropped_by_region, "dropped"))
+        s for s in (
+            _segment(new_by_region, "new"),
+            drops_segment,
+            _segment(dropped_by_region, "dropped"),
+        )
         if s
     ]
     commit_subject = f"daily run {run_iso[:10]}"
@@ -187,6 +202,7 @@ def run(dry_run: bool) -> int:
         "run_iso": run_iso,
         "new": len(buckets.new_since_last_run),
         "dropped": len(buckets.dropped_off),
+        "price_drops": len(price_drops),
         "active": len(buckets.still_active),
         "stale": len(buckets.stale),
         "new_by_region": new_by_region,

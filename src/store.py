@@ -59,6 +59,20 @@ CREATE TABLE IF NOT EXISTS run_log (
     notes TEXT,
     sources_json TEXT
 );
+
+-- One observation of (canonical_id, run_iso) → price_usd. Lets us detect
+-- day-over-day price drops without keeping the full history on every row.
+-- We write an entry for every run that has a price (INSERT OR IGNORE on the
+-- PK so re-running the same run_iso is a no-op).
+CREATE TABLE IF NOT EXISTS price_history (
+    canonical_id TEXT NOT NULL,
+    run_iso TEXT NOT NULL,
+    price_usd INTEGER,
+    price_original TEXT,
+    price_currency TEXT,
+    PRIMARY KEY (canonical_id, run_iso)
+);
+CREATE INDEX IF NOT EXISTS idx_price_history_canonical ON price_history(canonical_id);
 """
 
 
@@ -174,8 +188,62 @@ def reassign_aliases(con: sqlite3.Connection, old_canonical: str, new_canonical:
     )
 
 
+def _record_price_history(
+    con: sqlite3.Connection,
+    canonical_id: str,
+    run_iso: str,
+    price_usd: int | None,
+    price_original: str | None,
+    price_currency: str | None,
+) -> None:
+    """Write one (canonical_id, run_iso) row when we have a USD price.
+    INSERT OR IGNORE so re-running the same run_iso is harmless. We write on
+    every observation rather than only on change, because the storage cost is
+    trivial (~50 rows/day) and a flat per-run series makes the drop query
+    straightforward (just compare last two rows)."""
+    if price_usd is None:
+        return
+    con.execute(
+        """
+        INSERT OR IGNORE INTO price_history
+        (canonical_id, run_iso, price_usd, price_original, price_currency)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (canonical_id, run_iso, price_usd, price_original, price_currency),
+    )
+
+
+def find_price_drops(
+    con: sqlite3.Connection, run_iso: str
+) -> dict[str, tuple[int, int]]:
+    """Returns {canonical_id: (old_price_usd, new_price_usd)} for listings
+    whose price decreased between the previous observation and this run.
+    Only listings observed this run are considered; first-sightings (no
+    prior history) and price increases are excluded."""
+    rows = con.execute(
+        """
+        WITH last_two AS (
+          SELECT canonical_id, run_iso, price_usd,
+                 row_number() OVER (PARTITION BY canonical_id ORDER BY run_iso DESC) AS rn
+          FROM price_history
+          WHERE price_usd IS NOT NULL
+        )
+        SELECT a.canonical_id, b.price_usd AS old_p, a.price_usd AS new_p
+        FROM last_two a
+        JOIN last_two b
+          ON b.canonical_id = a.canonical_id
+         AND a.rn = 1 AND b.rn = 2
+        WHERE a.run_iso = ?
+          AND a.price_usd < b.price_usd
+        """,
+        (run_iso,),
+    ).fetchall()
+    return {r["canonical_id"]: (r["old_p"], r["new_p"]) for r in rows}
+
+
 def upsert_listings(con: sqlite3.Connection, listings: Iterable[dict], run_iso: str) -> tuple[int, int]:
-    """Returns (n_new, n_updated). Each listing must have a canonical_id assigned."""
+    """Returns (n_new, n_updated). Each listing must have a canonical_id assigned.
+    Side effect: writes a price_history row per listing-with-price-this-run."""
     n_new = n_updated = 0
     cur = con.cursor()
     for L in listings:
@@ -285,6 +353,15 @@ def upsert_listings(con: sqlite3.Connection, listings: Iterable[dict], run_iso: 
         # contributing_source_ids list is set by main.py before we reach here.
         for source, source_id in L.get("contributing_source_ids", []):
             write_alias(con, source, source_id, canonical)
+
+        _record_price_history(
+            con,
+            canonical,
+            run_iso,
+            L.get("price_usd"),
+            L.get("price_original"),
+            L.get("price_currency"),
+        )
     return n_new, n_updated
 
 
