@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -905,8 +906,16 @@ def _price_label(row: dict) -> str:
     cur = row.get("price_currency")
     if usd is not None:
         s = f"${usd:,} USD"
-        if cur == "JMD" and original:
-            s += f" (was {original})"
+        # Show the source's original price for any non-USD currency so the
+        # listing's local-currency ask is visible alongside the converted
+        # USD figure. JMD/GBP/CAD/EUR all qualify; 'unknown' means we
+        # couldn't classify so don't pretend.
+        if cur and cur not in ("USD", "unknown") and original:
+            # Real-world price strings often contain newlines and run-on
+            # spaces from source HTML — collapse them so the label renders
+            # on one line.
+            cleaned = re.sub(r"\s+", " ", original).strip()
+            s += f" (was {cleaned})"
         return s
     return original or "price unknown"
 

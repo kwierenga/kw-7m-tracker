@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 PropertyType = Literal["home", "land", "unknown"]
-Currency = Literal["USD", "JMD", "unknown"]
+Currency = Literal["USD", "JMD", "GBP", "CAD", "EUR", "unknown"]
 
 
 @dataclass
