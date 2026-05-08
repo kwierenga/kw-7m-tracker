@@ -334,6 +334,47 @@ PAGE_TEMPLATE = Template(
   .compact-list .age { color: var(--text-faint); font-size: 0.8rem; }
   .compact-list .dropped-title { color: var(--text-muted); text-decoration: line-through; }
 
+  /* favorites: a JS-populated section at the top showing every listing the
+     user has starred, regardless of region/property-type. Cloned from the
+     originals further down the page so click handlers (event-delegated)
+     keep working from either copy. */
+  .favorites { margin: 0 0 2rem; }
+  .favorites-h {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--border);
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+  }
+  .favorites-h .star { color: var(--boost); }
+  .favorites-count {
+    font-weight: 400;
+    color: var(--text-faint);
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Compact-row clones from still-active/stale sections render inside a
+     bare ul.listings rather than inside a details-wrapped compact-list, so
+     give them a card-like outer frame for visual consistency. */
+  #favorites-list .compact-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.55rem;
+    align-items: center;
+    padding: 0.55rem 0.85rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    box-shadow: var(--shadow);
+    font-size: 0.92rem;
+  }
+  #favorites-list .compact-row .price { font-weight: 700; }
+
   .quiet-note { margin-top: 1.5rem; }
   .quiet-note summary { color: var(--text-faint); }
   .quiet-note ul { list-style: none; padding-left: 1.2rem; color: var(--text-faint); font-size: 0.85rem; }
@@ -477,6 +518,14 @@ PAGE_TEMPLATE = Template(
   <label><input type="checkbox" id="filter-show-dismissed"> Show dismissed</label>
   <span class="filter-counts" id="filter-counts"></span>
 </div>
+
+<section class="favorites" id="favorites-section" hidden>
+  <h2 class="favorites-h">
+    <span class="star">⭐</span> Favorites
+    <span class="favorites-count" id="favorites-count"></span>
+  </h2>
+  <ul class="listings" id="favorites-list"></ul>
+</section>
 
 {% if regions %}
 <nav class="region-jump" aria-label="region jump">
@@ -681,6 +730,49 @@ PAGE_TEMPLATE = Template(
     document.body.classList.toggle('show-dismissed', !!filters.showDismissed);
     document.body.classList.toggle('only-interested', !!filters.onlyInterested);
     updateCounts();
+    refreshFavorites();
+  }
+
+  function refreshFavorites() {
+    var section = document.getElementById('favorites-section');
+    var list = document.getElementById('favorites-list');
+    var countEl = document.getElementById('favorites-count');
+    if (!section || !list) return;
+
+    // Collect ids whose status === 'interested'.
+    var starred = [];
+    for (var id in statuses) {
+      if (Object.prototype.hasOwnProperty.call(statuses, id)
+          && statuses[id] && statuses[id].s === 'interested') {
+        starred.push(id);
+      }
+    }
+
+    // Rebuild from scratch — cheap (single-digit clones in practice) and
+    // avoids tracking which clones came from which star toggle.
+    list.innerHTML = '';
+    var added = 0;
+    starred.forEach(function (id) {
+      var matches = document.querySelectorAll('[data-id="' + cssEscape(id) + '"]');
+      // Skip any matches that live inside the favorites list itself —
+      // we want to clone the canonical instance from a region section.
+      var original = null;
+      for (var i = 0; i < matches.length; i++) {
+        if (!list.contains(matches[i])) { original = matches[i]; break; }
+      }
+      if (!original) return;
+      var clone = original.cloneNode(true);
+      // Compact-list rows have no card chrome; tag clones so CSS can give
+      // them a card-like frame inside #favorites-list.
+      if (original.tagName === 'LI' && !clone.classList.contains('card')) {
+        clone.classList.add('compact-row');
+      }
+      list.appendChild(clone);
+      added++;
+    });
+
+    section.hidden = added === 0;
+    if (countEl) countEl.textContent = added ? '(' + added + ')' : '';
   }
 
   function updateCounts() {
@@ -711,6 +803,7 @@ PAGE_TEMPLATE = Template(
     var rows = document.querySelectorAll('[data-id="' + cssEscape(id) + '"]');
     for (var i = 0; i < rows.length; i++) applyRow(rows[i]);
     updateCounts();
+    refreshFavorites();
   }
 
   function cssEscape(s) {
