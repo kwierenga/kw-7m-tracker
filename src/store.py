@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS listings (
     listed_on_iso TEXT,
     photo_url TEXT,
     first_seen_iso TEXT NOT NULL,
-    last_seen_iso TEXT NOT NULL
+    last_seen_iso TEXT NOT NULL,
+    detail_fetched_iso TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_listings_last_seen ON listings(last_seen_iso);
@@ -76,6 +77,12 @@ def _migrate(con: sqlite3.Connection) -> None:
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_listings_canonical "
             "ON listings(canonical_id) WHERE canonical_id IS NOT NULL"
         )
+    if "detail_fetched_iso" not in listing_cols:
+        # Marker for "we have looked at this listing's detail page". When
+        # set, skip detail-fetching even if listed_on_iso is still NULL
+        # (the page just doesn't expose a date) — otherwise we'd refetch
+        # every run. Cleared (column wiped) only by manual DB surgery.
+        con.execute("ALTER TABLE listings ADD COLUMN detail_fetched_iso TEXT")
 
     # Backfill canonical_id for legacy rows: seed with stable_id (preserves
     # current identity) and seed aliases from the parsed source:source_id.
@@ -133,6 +140,25 @@ def write_alias(con: sqlite3.Connection, source: str, source_id: str, canonical_
     )
 
 
+def lookup_detail_state(
+    con: sqlite3.Connection, canonical_ids: Iterable[str]
+) -> dict[str, tuple[str | None, str | None]]:
+    """For each canonical_id, return (listed_on_iso, detail_fetched_iso).
+    Missing canonical_ids are absent from the result. Used by the detail-
+    page fetcher to skip work for listings already enriched."""
+    out: dict[str, tuple[str | None, str | None]] = {}
+    for cid in canonical_ids:
+        if not cid:
+            continue
+        row = con.execute(
+            "SELECT listed_on_iso, detail_fetched_iso FROM listings WHERE canonical_id = ?",
+            (cid,),
+        ).fetchone()
+        if row:
+            out[cid] = (row["listed_on_iso"], row["detail_fetched_iso"])
+    return out
+
+
 def reassign_aliases(con: sqlite3.Connection, old_canonical: str, new_canonical: str) -> None:
     """When dedup unifies two listings, point every alias of the loser at the winner.
     Also rename any listings row that still carries the loser canonical."""
@@ -183,7 +209,8 @@ def upsert_listings(con: sqlite3.Connection, listings: Iterable[dict], run_iso: 
                     keyword_boost=?,
                     listed_on_iso=COALESCE(?, listed_on_iso),
                     photo_url=COALESCE(?, photo_url),
-                    last_seen_iso=?
+                    last_seen_iso=?,
+                    detail_fetched_iso=COALESCE(?, detail_fetched_iso)
                 WHERE canonical_id=?
                 """,
                 (
@@ -205,6 +232,7 @@ def upsert_listings(con: sqlite3.Connection, listings: Iterable[dict], run_iso: 
                     L.get("listed_on_iso"),
                     L.get("photo_url"),
                     run_iso,
+                    L.get("detail_fetched_iso"),
                     canonical,
                 ),
             )
@@ -217,8 +245,9 @@ def upsert_listings(con: sqlite3.Connection, listings: Iterable[dict], run_iso: 
                     property_type, price_usd, price_original, price_currency,
                     lat, lon, location_text, location_confidence,
                     matched_regions_json, keyword_boost,
-                    listed_on_iso, photo_url, first_seen_iso, last_seen_iso
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    listed_on_iso, photo_url, first_seen_iso, last_seen_iso,
+                    detail_fetched_iso
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 ON CONFLICT(stable_id) DO UPDATE SET
                     canonical_id=excluded.canonical_id,
                     sources_json=excluded.sources_json,
@@ -247,6 +276,7 @@ def upsert_listings(con: sqlite3.Connection, listings: Iterable[dict], run_iso: 
                     L.get("photo_url"),
                     first_seen,
                     run_iso,
+                    L.get("detail_fetched_iso"),
                 ),
             )
             n_new += 1

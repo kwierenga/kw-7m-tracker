@@ -9,6 +9,7 @@ from pathlib import Path
 
 from . import scrapers
 from .dedup import dedup
+from .details import enrich_listed_on
 from .diff import classify, regions_for
 from .digest import build_digest, write_static_site
 from .fx import get_jmd_per_usd
@@ -86,6 +87,13 @@ def run(dry_run: bool) -> int:
 
         for old, new in alias_reassignments:
             reassign_aliases(con, old, new)
+
+        # Detail-page fetch: enrich listed_on_iso for matched listings whose
+        # source only puts the publication date on the detail page. Cached in
+        # the listings table via detail_fetched_iso so we only fetch once
+        # per listing per source. Biggest accuracy win for "new since last run".
+        n_fetched, n_extracted = enrich_listed_on(con, merged, run_iso)
+        print(f"[details] fetched={n_fetched} extracted_listed_on={n_extracted}")
 
         rows_for_db = [
             asdict(L) | {

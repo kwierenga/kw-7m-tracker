@@ -55,3 +55,7 @@ class NormalizedListing:
     # Populated by normalize (single entry) and grown by dedup on merge.
     # Used at upsert time to write/refresh alias rows.
     contributing_source_ids: list[tuple[str, str]] = field(default_factory=list)
+    # ISO timestamp of when we last fetched this listing's detail page (any
+    # source). Set by src/details.py — None means "never fetched". Distinct
+    # from listed_on_iso, which is the listing's own publication date.
+    detail_fetched_iso: str | None = None

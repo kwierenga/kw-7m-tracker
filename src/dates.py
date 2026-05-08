@@ -17,7 +17,10 @@ from __future__ import annotations
 import re
 from datetime import date
 
-ISO_RE = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
+# Trailing (?!\d) instead of \b: a `\b` requires a non-word char to follow,
+# which fails on datetimes like "2026-04-22T14:30:00Z" (T is a word char).
+# (?!\d) accepts T/space/end-of-string but still rejects digit-extension.
+ISO_RE = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})(?!\d)")
 NUMERIC_RE = re.compile(r"\b(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})\b")
 
 _MONTHS = {

@@ -183,10 +183,7 @@ When committing saved HTML as test fixtures, GitHub push protection blocks the p
 
 ## Outstanding work
 
-- Fix Century 21 JM pagination URL pattern (currently capped at home page, ~5 cards)
-- Persist a canonical cross-source listing identity (bug #1B): even with the dropped-off fix above, a listing's surviving stable_id can flip between runs if its primary source flakes — mitigation handled, root cause is on the list
-- Inter-request cooldown to avoid the transient rate-limit 0-returns we see during rapid iteration
-- Detail-page fetching for accurate listed-on dates (biggest accuracy gain for "new since last run")
+- Detail-page fetching for accurate listed-on dates + beds/baths/sqft (biggest accuracy gain for "new since last run")
 - Map view (Leaflet + OpenStreetMap) showing each listing relative to the regions
 - Price-drop tracking day-over-day
 - Manual paste-in ingest for Facebook Marketplace listings (same pattern as xposure_urls.txt)
