@@ -18,7 +18,8 @@ typical daily runs see only a handful of new listings).
 """
 from __future__ import annotations
 
-from typing import Iterable
+import json
+from typing import Callable, Iterable
 
 from curl_cffi import requests as cf
 
@@ -102,3 +103,56 @@ def enrich_listed_on(
             continue
 
     return n_fetched, n_extracted
+
+
+# Status codes we treat as conclusive evidence the URL no longer maps to a
+# listing. Other 4xx (e.g. 403/451) might be transient rate-limit / geo-block
+# noise, so we don't trust them as drop signals.
+_DEAD_STATUSES = (404, 410)
+
+ProbeFn = Callable[[str], int | None]
+
+
+def _classify_dropped_candidates(
+    candidates: list[dict], probe: ProbeFn
+) -> tuple[list[dict], list[dict]]:
+    """Pure decision logic, separated from HTTP for testability. A listing is
+    confirmed dropped only when EVERY one of its source URLs probes as dead
+    (404/410). Any 200, redirect, 5xx, network error, or empty URL list falls
+    through to the false-drops bucket — biasing toward silence per the same
+    rationale as listings_dropped_in_run's flake guard."""
+    confirmed: list[dict] = []
+    false_drops: list[dict] = []
+    for row in candidates:
+        try:
+            urls = json.loads(row.get("urls_json") or "[]")
+        except json.JSONDecodeError:
+            urls = []
+        if not urls:
+            false_drops.append(row)
+            continue
+        if all(probe(u) in _DEAD_STATUSES for u in urls):
+            confirmed.append(row)
+        else:
+            false_drops.append(row)
+    return confirmed, false_drops
+
+
+def verify_dropped(candidates: list[dict]) -> tuple[list[dict], list[dict]]:
+    """For each candidate dropped listing, fetch its source URL(s) and only
+    confirm the drop when every URL returns 404/410. Returns
+    (confirmed_dropped, false_drops). The candidate count is small in
+    practice (single-digit per run) so a one-off session with the same
+    Throttle scrapers use is fine."""
+    if not candidates:
+        return [], []
+    throttle = Throttle()
+    with cf.Session(impersonate="chrome131") as s:
+        def _probe(url: str) -> int | None:
+            try:
+                r = polite_get(s, url, throttle, allow_redirects=True, timeout=30)
+                return r.status_code
+            except Exception:  # noqa: BLE001
+                return None
+
+        return _classify_dropped_candidates(candidates, _probe)

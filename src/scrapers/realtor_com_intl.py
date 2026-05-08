@@ -13,23 +13,52 @@ from ._throttle import Throttle, polite_get
 
 SOURCE = "realtor_com_intl"
 BASE = "https://www.realtor.com"
-URLS = [f"{BASE}/international/jm/"]
+# Page-1 URL plus paginated p2..p25 (Jamaica search has 15+ pages of ~25
+# listings each as of 2026-05). Cap is conservative; without pagination we
+# only saw the rotating top-19, which fired false 'dropped off' alerts every
+# time a listing was pushed off page 1 by newer ones.
+PAGE_CAP = 25
+
+
+def _build_urls() -> list[str]:
+    urls = [f"{BASE}/international/jm/"]
+    for page in range(2, PAGE_CAP + 1):
+        urls.append(f"{BASE}/international/jm/p{page}/")
+    return urls
 
 
 def scrape() -> list[RawListing]:
     out: list[RawListing] = []
+    seen: set[str] = set()
+    consecutive_empty = 0
     throttle = Throttle()
     with cf.Session(impersonate="chrome131") as s:
         try:
             polite_get(s, f"{BASE}/", throttle, allow_redirects=True, timeout=30)
         except Exception:  # noqa: BLE001
             pass
-        for url in URLS:
+        for i, url in enumerate(_build_urls()):
             try:
                 r = polite_get(s, url, throttle, allow_redirects=True, timeout=30)
                 if r.status_code != 200:
+                    consecutive_empty += 1
+                    if consecutive_empty >= 2:
+                        break
                     continue
-                out.extend(_parse(r.text))
+                new_count = 0
+                for raw in _parse(r.text):
+                    if raw.url not in seen:
+                        seen.add(raw.url)
+                        out.append(raw)
+                        new_count += 1
+                # Page 1 may legitimately overlap with prior pages on the
+                # bootstrap; only count empty pages on paginated entries.
+                if i > 0 and new_count == 0:
+                    consecutive_empty += 1
+                    if consecutive_empty >= 2:
+                        break
+                else:
+                    consecutive_empty = 0
             except Exception:  # noqa: BLE001
                 continue
     return out

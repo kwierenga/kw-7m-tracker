@@ -9,7 +9,7 @@ from pathlib import Path
 
 from . import scrapers
 from .dedup import dedup
-from .details import enrich_listed_on
+from .details import enrich_listed_on, verify_dropped
 from .diff import classify, regions_for
 from .digest import build_digest, write_static_site
 from .fx import get_jmd_per_usd
@@ -118,10 +118,23 @@ def run(dry_run: bool) -> int:
         # Bug fix: only flag as dropped when ALL of a listing's sources scraped
         # successfully this run. Otherwise a transient failure spawns phantom
         # 'dropped' listings — and amplifies under daily cadence.
-        dropped = (
+        candidates = (
             listings_dropped_in_run(con, run_iso, sources_active=sources_active)
             if prev_run else []
         )
+        # Second-line defense: probe each candidate URL. Coverage-limited
+        # sources (e.g. realtor.com only exposes the most-recent page-1 set
+        # without pagination) silently rotate listings off our scrape window
+        # even though they're still active. URL probe catches that — only
+        # 404/410 confirms the drop.
+        if candidates:
+            dropped, false_drops = verify_dropped(candidates)
+            print(
+                f"[verify-drops] candidates={len(candidates)} "
+                f"confirmed={len(dropped)} false_drops={len(false_drops)}"
+            )
+        else:
+            dropped = []
         buckets = classify(seen, dropped, run_iso, prev_run)
         print(
             f"[diff] new={len(buckets.new_since_last_run)} "
