@@ -114,7 +114,20 @@ PAGE_TEMPLATE = Template(
     margin: 0 0 1.5rem;
   }
   .count-new { color: var(--accent); font-weight: 700; }
-  .count-drops { color: var(--accent); font-weight: 700; }
+  .count-drops {
+    color: var(--accent);
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 0 0.25rem;
+    transition: background 0.1s, color 0.1s;
+    user-select: none;
+  }
+  .count-drops:hover { background: var(--accent-bg); }
+  .count-drops[aria-pressed="true"] {
+    background: var(--accent);
+    color: var(--bg);
+  }
   .price-was {
     color: var(--accent);
     font-size: 0.82rem;
@@ -482,6 +495,12 @@ PAGE_TEMPLATE = Template(
   /* in only-interested mode, collapse empty subsections gracefully */
   body.only-interested .empty-line { display: none; }
 
+  /* only-drops filter: hide every listing that doesn't have a price drop.
+     data-drop is set by tagDrops() on any [data-id] containing a .price-was
+     descendant, so this picks up cards, compact rows, and favorites clones. */
+  body.only-drops [data-id]:not([data-drop]) { display: none; }
+  body.only-drops .empty-line { display: none; }
+
   @media (max-width: 600px) {
     body { padding: 0.75rem 0.85rem 3rem; font-size: 15px; }
     .card {
@@ -508,7 +527,7 @@ PAGE_TEMPLATE = Template(
 <h1>Jamaica property watch</h1>
 <p class="summary">
   <span class="count-new">{{ total_new }} new</span> &middot;
-  {% if total_drops %}<span class="count-drops">↓ {{ total_drops }} price drop{{ '' if total_drops == 1 else 's' }}</span> &middot;{% endif %}
+  {% if total_drops %}<span class="count-drops" id="toggle-only-drops" role="button" tabindex="0" aria-pressed="false" title="Click to filter to price drops only">↓ {{ total_drops }} price drop{{ '' if total_drops == 1 else 's' }}</span> &middot;{% endif %}
   {{ total_active }} still active &middot;
   {{ total_stale }} stale &middot;
   {{ total_dropped }} dropped off
@@ -708,7 +727,7 @@ PAGE_TEMPLATE = Template(
   }
 
   var statuses = readJSON(STATUS_KEY, {}) || {};
-  var filters = readJSON(FILTER_KEY, {showDismissed: false, onlyInterested: false}) || {};
+  var filters = readJSON(FILTER_KEY, {showDismissed: false, onlyInterested: false, onlyDrops: false}) || {};
 
   function applyRow(el) {
     var id = el.getAttribute('data-id');
@@ -730,8 +749,24 @@ PAGE_TEMPLATE = Template(
     for (var i = 0; i < rows.length; i++) applyRow(rows[i]);
     document.body.classList.toggle('show-dismissed', !!filters.showDismissed);
     document.body.classList.toggle('only-interested', !!filters.onlyInterested);
+    document.body.classList.toggle('only-drops', !!filters.onlyDrops);
+    tagDrops();
     updateCounts();
     refreshFavorites();
+  }
+
+  function tagDrops() {
+    // Mark every [data-id] row that contains a .price-was as data-drop="1"
+    // so the only-drops filter can target it. Idempotent — also re-applied
+    // to clones inside #favorites-list.
+    var rows = document.querySelectorAll('[data-id]');
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].querySelector('.price-was')) {
+        rows[i].setAttribute('data-drop', '1');
+      } else {
+        rows[i].removeAttribute('data-drop');
+      }
+    }
   }
 
   function refreshFavorites() {
@@ -774,6 +809,8 @@ PAGE_TEMPLATE = Template(
 
     section.hidden = added === 0;
     if (countEl) countEl.textContent = added ? '(' + added + ')' : '';
+    // Re-tag clones so they participate in the only-drops filter too.
+    tagDrops();
   }
 
   function updateCounts() {
@@ -842,6 +879,28 @@ PAGE_TEMPLATE = Template(
 
   bindFilter('filter-show-dismissed', 'showDismissed');
   bindFilter('filter-only-interested', 'onlyInterested');
+
+  var dropsToggle = document.getElementById('toggle-only-drops');
+  if (dropsToggle) {
+    function syncDropsToggle() {
+      dropsToggle.setAttribute('aria-pressed', filters.onlyDrops ? 'true' : 'false');
+    }
+    function flipDrops() {
+      filters.onlyDrops = !filters.onlyDrops;
+      writeJSON(FILTER_KEY, filters);
+      document.body.classList.toggle('only-drops', !!filters.onlyDrops);
+      syncDropsToggle();
+    }
+    dropsToggle.addEventListener('click', flipDrops);
+    dropsToggle.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter' || ev.key === ' ') {
+        ev.preventDefault();
+        flipDrops();
+      }
+    });
+    syncDropsToggle();
+  }
+
   applyAll();
 })();
 </script>
