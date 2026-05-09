@@ -4,6 +4,7 @@ from .caribbean_mls import scrape as scrape_caribbean_mls
 from .cb_jamaica import scrape as scrape_cb_jamaica
 from .century21_jm import scrape as scrape_century21_jm
 from .golden_gates import scrape as scrape_golden_gates
+from .keez import scrape as scrape_keez
 from .millennium import scrape as scrape_millennium
 from .realtor_com_intl import scrape as scrape_realtor_com_intl
 from .remax_elite import scrape as scrape_remax_elite
@@ -17,5 +18,6 @@ ALL_SCRAPERS = [
     ("golden_gates", scrape_golden_gates),
     ("century21_jm", scrape_century21_jm),
     ("remax_elite", scrape_remax_elite),
+    ("keez", scrape_keez),
     ("xposure", scrape_xposure_manual),
 ]

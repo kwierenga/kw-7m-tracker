@@ -19,6 +19,7 @@ from src.scrapers import (
     cb_jamaica,
     century21_jm,
     golden_gates,
+    keez,
     millennium,
     realtor_com_intl,
     remax_elite,
@@ -80,6 +81,16 @@ class ParserSmokeTests(unittest.TestCase):
         self._check_minimum(listings, 10, "remax_elite")
         self.assertTrue(any(L.raw_price for L in listings))
         self.assertTrue(any(L.photo_url for L in listings))
+
+    def test_keez(self) -> None:
+        listings = keez._parse(_load("keez.json"))
+        self._check_minimum(listings, 10, "keez")
+        # JSON API gives us structured data, so most fields should be populated
+        self.assertTrue(any(L.raw_price for L in listings))
+        self.assertTrue(any(L.photo_url for L in listings))
+        self.assertTrue(any(L.listed_on_iso for L in listings))
+        # Coords embedded in description so normalize.py picks them up exact
+        self.assertTrue(any(L.description and "[coords:" in L.description for L in listings))
 
     def test_xposure_interactive(self) -> None:
         listing = xposure_manual._parse(

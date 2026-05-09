@@ -988,6 +988,7 @@ SOURCE_RANK = {
     "caribbean_mls": 6,
     "golden_gates": 7,
     "millennium": 8,
+    "keez": 9,
 }
 
 

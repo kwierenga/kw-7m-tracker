@@ -57,14 +57,14 @@ GitHub Actions cron (daily 13:00 UTC = 8 AM Jamaica)
 | cbjamaica.com (Coldwell Banker JA) | ✅ active | Featured + recent properties |
 | millennium properties | ✅ active | `/property-search?page=N` paginated |
 | golden gates realty JA | ✅ active | Same template as Millennium |
-| century21jm.com | ⚠️ partial | Home only (5 cards) — pagination URL pattern still unknown |
+| century21jm.com | ✅ active | Long IDX search URL with `/page/N/limit/12/range/H` pagination |
 | xposure InteractiveLink | ✅ active | Manual ingest from `data/xposure_urls.txt` |
-| Sagicor / Sagicor Properties | ❌ dropped | AWS WAF JS challenge — needs Playwright |
+| getkeez.com | ✅ active | Public JSON API at `/api/properties` — exact lat/lon, walked per parish (AN/TR/PO/WE) |
+| Sagicor Properties (sagicorproperties.com) | ⏳ candidate | Reachable now without WAF; HTML scraper not yet built |
 | Sotheby's Jamaica | ❌ dropped | AWS WAF JS challenge — needs Playwright |
 | properstar.com/jamaica | ❌ dropped | Cloudflare-tier anti-bot; not worth it |
 | RE/MAX Jamaica | ❌ dropped | The .com domain is recruitment brochure, not listings |
 | jamaica-homes.com | ❌ dropped | Substack newsletter, not a listings site |
-| getkeez.com | ⏳ deferred | Vue SPA — would need Playwright |
 | Facebook Marketplace | ⏳ deferred | Login-walled; could add manual paste-in like xposure |
 
 ## Quick start
