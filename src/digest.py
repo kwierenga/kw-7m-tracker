@@ -809,7 +809,7 @@ PAGE_TEMPLATE = Template(
 
   function cssEscape(s) {
     if (window.CSS && CSS.escape) return CSS.escape(s);
-    return String(s).replace(/["\\]/g, '\\$&');
+    return String(s).replace(/["\\\\]/g, '\\\\$&');
   }
 
   document.addEventListener('click', function (ev) {

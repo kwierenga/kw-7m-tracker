@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import re
 
 EARTH_RADIUS_MI = 3958.7613
 
@@ -47,9 +48,16 @@ TOWN_CENTROIDS: dict[str, tuple[float, float]] = {
 }
 
 
+_ST_PREFIX_RE = re.compile(r"\b(?:saint|st\.)\s+")
+
+
 def lookup_centroid(text: str) -> tuple[float, float] | None:
     """Best-effort: try town first (more specific), fall back to parish."""
-    t = text.lower()
+    # Normalize "St." / "Saint" so listings like "Rose Hall, St. James" still
+    # match parish keys ("st james"). Without this, the parish lookup misses,
+    # confidence falls to "none", and an Upton boost keyword like "golf
+    # course" or "country club" wrongly infers the listing into Upton.
+    t = _ST_PREFIX_RE.sub("st ", text.lower())
     for name, coords in TOWN_CENTROIDS.items():
         if name in t:
             return coords
