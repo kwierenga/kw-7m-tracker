@@ -23,6 +23,7 @@ from src.scrapers import (
     millennium,
     realtor_com_intl,
     remax_elite,
+    sagicor_props,
     xposure_manual,
 )
 
@@ -79,6 +80,13 @@ class ParserSmokeTests(unittest.TestCase):
     def test_remax_elite(self) -> None:
         listings = remax_elite._parse(_load("remax_elite.html"))
         self._check_minimum(listings, 10, "remax_elite")
+        self.assertTrue(any(L.raw_price for L in listings))
+        self.assertTrue(any(L.photo_url for L in listings))
+
+    def test_sagicor_props(self) -> None:
+        listings = sagicor_props._parse(_load("sagicor_props.html"))
+        self._check_minimum(listings, 5, "sagicor_props")
+        # Cards have a price text and a thumbnail in the standard template
         self.assertTrue(any(L.raw_price for L in listings))
         self.assertTrue(any(L.photo_url for L in listings))
 

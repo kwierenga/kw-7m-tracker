@@ -8,6 +8,7 @@ from .keez import scrape as scrape_keez
 from .millennium import scrape as scrape_millennium
 from .realtor_com_intl import scrape as scrape_realtor_com_intl
 from .remax_elite import scrape as scrape_remax_elite
+from .sagicor_props import scrape as scrape_sagicor_props
 from .xposure_manual import scrape as scrape_xposure_manual
 
 ALL_SCRAPERS = [
@@ -19,5 +20,6 @@ ALL_SCRAPERS = [
     ("century21_jm", scrape_century21_jm),
     ("remax_elite", scrape_remax_elite),
     ("keez", scrape_keez),
+    ("sagicor_props", scrape_sagicor_props),
     ("xposure", scrape_xposure_manual),
 ]

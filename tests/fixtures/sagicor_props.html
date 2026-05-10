@@ -1,0 +1,133 @@
+<!doctype html>
+<!--
+  Synthetic fixture: 8 .property_listing_items cards mirroring the markup
+  Sagicor returns from /property-search. Authored from a successful live
+  capture during scraper development. The site is behind an AWS WAF that
+  intermittently rate-limits, so a real captured fixture isn't always
+  reproducible — this synthetic mirrors enough of the production HTML
+  to catch parser breakage (selector renames etc.) without round-tripping
+  the WAF every time the test runs. Card structure verified against:
+    https://www.sagicorproperties.com/property-search?category=residential
+      &rent_sale=sale&parish=St.+Ann&limit=100&page=1
+-->
+<html lang="en"><head><meta charset="utf-8"><title>Sagicor Properties</title></head>
+<body>
+<div class="container">
+  <div class="row">
+
+    <div class="property_listing_items property-box2">
+      <div class="property_listing_img">
+        <a href="https://www.sagicorproperties.com/property/St-dot-+Ann++Lime+Hall/MLS-92980">
+          <img alt="property" class="img-fluid" src="https://d1p6c8qwy766j6.cloudfront.net/storage/30cadc14ffb741afaea82d31cdc93d43.jpg"/>
+        </a>
+      </div>
+      <div class="property_listing_content">
+        <h3 class="prop_title">Lime Hall, St. Ann</h3>
+        <h4 class="price_text">             USD $75,000,000
+            </h4>
+        <div class="property_listing_amenities"><ul></ul></div>
+        <p>Discover an extraordinary investment opportunity in Jamaica's most coveted tourism corridor. This exceptional 245-acre estate presents a rare chance to acquire prime dev...</p>
+      </div>
+    </div>
+
+    <div class="property_listing_items property-box2">
+      <div class="property_listing_img">
+        <a href="https://www.sagicorproperties.com/property/St-dot-+Ann++-dot-/SPSL-17119">
+          <img alt="property" class="img-fluid" src="https://d1p6c8qwy766j6.cloudfront.net/storage/abc123abc123abc123abc123abc12345.jpg"/>
+        </a>
+      </div>
+      <div class="property_listing_content">
+        <h3 class="prop_title">St. Ann</h3>
+        <h4 class="price_text">             USD $450,000             </h4>
+        <div class="property_listing_amenities"><ul></ul></div>
+        <p>Beachfront villa with direct access to a private cove. Three bedrooms, three baths, plus a detached cottage. Mature landscaping throughout.</p>
+      </div>
+    </div>
+
+    <div class="property_listing_items property-box2">
+      <div class="property_listing_img">
+        <a href="https://www.sagicorproperties.com/property/Trelawny++Falmouth/MLS-101180">
+          <img alt="property" class="img-fluid" src="https://d1p6c8qwy766j6.cloudfront.net/storage/def456def456def456def456def45678.jpg"/>
+        </a>
+      </div>
+      <div class="property_listing_content">
+        <h3 class="prop_title">Falmouth, Trelawny</h3>
+        <h4 class="price_text">             JMD $32,000,000             </h4>
+        <div class="property_listing_amenities"><ul></ul></div>
+        <p>Updated bungalow on a quarter-acre lot, walking distance to the historic district. Recently renovated kitchen and main bath.</p>
+      </div>
+    </div>
+
+    <div class="property_listing_items property-box2">
+      <div class="property_listing_img">
+        <a href="https://www.sagicorproperties.com/property/Portland++Port+Antonio/MLS-99001">
+          <img alt="property" class="img-fluid" src="https://d1p6c8qwy766j6.cloudfront.net/storage/ghi789ghi789ghi789ghi789ghi78901.jpg"/>
+        </a>
+      </div>
+      <div class="property_listing_content">
+        <h3 class="prop_title">Port Antonio, Portland</h3>
+        <h4 class="price_text">             USD $625,000             </h4>
+        <div class="property_listing_amenities"><ul></ul></div>
+        <p>Hillside home with sweeping ocean views over San San Bay. Four bedrooms, open-plan kitchen, infinity pool, two-car garage.</p>
+      </div>
+    </div>
+
+    <div class="property_listing_items property-box2">
+      <div class="property_listing_img">
+        <a href="https://www.sagicorproperties.com/property/Westmoreland++Negril/MLS-94455">
+          <img alt="property" class="img-fluid" src="https://d1p6c8qwy766j6.cloudfront.net/storage/jkl012jkl012jkl012jkl012jkl01234.jpg"/>
+        </a>
+      </div>
+      <div class="property_listing_content">
+        <h3 class="prop_title">Negril, Westmoreland</h3>
+        <h4 class="price_text">             USD $1,200,000             </h4>
+        <div class="property_listing_amenities"><ul></ul></div>
+        <p>Boutique guesthouse on Seven Mile Beach with seven en-suite rooms, restaurant license, and existing Airbnb cashflow. Owner relocating.</p>
+      </div>
+    </div>
+
+    <div class="property_listing_items property-box2">
+      <div class="property_listing_img">
+        <a href="https://www.sagicorproperties.com/property/St-dot-+Ann++Discovery+Bay/MLS-95211">
+          <img alt="property" class="img-fluid" src="https://d1p6c8qwy766j6.cloudfront.net/storage/mno345mno345mno345mno345mno34567.jpg"/>
+        </a>
+      </div>
+      <div class="property_listing_content">
+        <h3 class="prop_title">Discovery Bay, St. Ann</h3>
+        <h4 class="price_text">             USD $295,000             </h4>
+        <div class="property_listing_amenities"><ul></ul></div>
+        <p>Two-bedroom condo in a gated complex with shared pool and 24-hour security. Walking distance to Puerto Seco Beach.</p>
+      </div>
+    </div>
+
+    <div class="property_listing_items property-box2">
+      <div class="property_listing_img">
+        <a href="https://www.sagicorproperties.com/property/St-dot-+Ann++Runaway+Bay/SPSR-22310">
+          <img alt="property" class="img-fluid" src="https://d1p6c8qwy766j6.cloudfront.net/storage/pqr678pqr678pqr678pqr678pqr67890.jpg"/>
+        </a>
+      </div>
+      <div class="property_listing_content">
+        <h3 class="prop_title">Cardiff Hall, Runaway Bay, St. Ann</h3>
+        <h4 class="price_text">             USD $180,000             </h4>
+        <div class="property_listing_amenities"><ul></ul></div>
+        <p>Half-acre residential lot in the Cardiff Hall subdivision. Utilities to property line. Title clear, ready to build.</p>
+      </div>
+    </div>
+
+    <div class="property_listing_items property-box2">
+      <div class="property_listing_img">
+        <a href="https://www.sagicorproperties.com/property/St-dot-+Ann++Mammee+Bay/MLS-93772">
+          <img alt="property" class="img-fluid" src="https://d1p6c8qwy766j6.cloudfront.net/storage/stu901stu901stu901stu901stu90123.jpg"/>
+        </a>
+      </div>
+      <div class="property_listing_content">
+        <h3 class="prop_title">Mammee Bay, St. Ann</h3>
+        <h4 class="price_text">             USD $675,000             </h4>
+        <div class="property_listing_amenities"><ul></ul></div>
+        <p>Five-bedroom villa in the Mammee Bay Estates community. Resort access, beach club privileges, on-site management.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body></html>

@@ -989,6 +989,7 @@ SOURCE_RANK = {
     "golden_gates": 7,
     "millennium": 8,
     "keez": 9,
+    "sagicor_props": 10,
 }
 
 

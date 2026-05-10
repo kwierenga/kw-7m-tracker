@@ -60,7 +60,7 @@ GitHub Actions cron (daily 13:00 UTC = 8 AM Jamaica)
 | century21jm.com | ✅ active | Long IDX search URL with `/page/N/limit/12/range/H` pagination |
 | xposure InteractiveLink | ✅ active | Manual ingest from `data/xposure_urls.txt` |
 | getkeez.com | ✅ active | Public JSON API at `/api/properties` — exact lat/lon, walked per parish (AN/TR/PO/WE) |
-| Sagicor Properties (sagicorproperties.com) | ⏳ candidate | Reachable now without WAF; HTML scraper not yet built |
+| Sagicor Properties (sagicorproperties.com) | ⚠️ flaky | Same template as Golden Gates; AWS WAF intermittently challenges from busy IPs — handled gracefully via `sources_active` |
 | Sotheby's Jamaica | ❌ dropped | AWS WAF JS challenge — needs Playwright |
 | properstar.com/jamaica | ❌ dropped | Cloudflare-tier anti-bot; not worth it |
 | RE/MAX Jamaica | ❌ dropped | The .com domain is recruitment brochure, not listings |
