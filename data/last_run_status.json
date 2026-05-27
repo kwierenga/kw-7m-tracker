@@ -1,15 +1,15 @@
 {
-  "run_iso": "2026-05-26T16:41:48.873847+00:00",
-  "new": 14,
+  "run_iso": "2026-05-27T16:36:08.681935+00:00",
+  "new": 21,
   "dropped": 0,
-  "price_drops": 22,
-  "active": 175,
-  "stale": 278,
+  "price_drops": 24,
+  "active": 264,
+  "stale": 281,
   "new_by_region": {
+    "upton": 9,
+    "mammee_bay": 10,
+    "duncans": 3,
     "negril": 1,
-    "upton": 6,
-    "mammee_bay": 5,
-    "duncans": 2,
     "discovery_bay": 4,
     "runaway_bay": 4
   },
@@ -19,12 +19,12 @@
     "cb_jamaica": 7,
     "caribbean_mls": 12,
     "millennium": 84,
-    "golden_gates": 0,
-    "century21_jm": 0,
-    "remax_elite": 998,
-    "keez": 974,
-    "sagicor_props": 0,
+    "golden_gates": 104,
+    "century21_jm": 174,
+    "remax_elite": 1019,
+    "keez": 973,
+    "sagicor_props": 1561,
     "xposure": 1
   },
-  "commit_subject": "daily run 2026-05-26 \u2014 22 new (upton: 6, mammee_bay: 5, discovery_bay: 4, runaway_bay: 4, duncans: 2, negril: 1), 22 price drops"
+  "commit_subject": "daily run 2026-05-27 \u2014 31 new (mammee_bay: 10, upton: 9, discovery_bay: 4, runaway_bay: 4, duncans: 3, negril: 1), 24 price drops"
 }
