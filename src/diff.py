@@ -39,9 +39,14 @@ def _parse_iso(s: str | None) -> datetime | None:
     if not s:
         return None
     try:
-        return datetime.fromisoformat(s.replace("Z", "+00:00"))
+        dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
     except ValueError:
         return None
+    # Detail-extracted dates (e.g. "2026-05-15") parse as naive; treat them as
+    # UTC so they can be compared against the tz-aware run cutoffs below.
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 def classify(
