@@ -4,6 +4,7 @@ __pycache__/
 .env
 data/inspect/
 data/cache/
+data/preview_digest.html
 *.log
 .vscode/
 .idea/
