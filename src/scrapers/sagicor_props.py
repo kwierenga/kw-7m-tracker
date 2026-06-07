@@ -49,6 +49,8 @@ def scrape() -> list[RawListing]:
     seen: set[str] = set()
     consecutive_empty_paginated = 0
     last_parish: str | None = None
+    saw_200 = False
+    last_status: int | None = None
     throttle = Throttle()
     with cf.Session(impersonate="chrome131") as s:
         try:
@@ -67,6 +69,7 @@ def scrape() -> list[RawListing]:
                 last_parish = current_parish
             try:
                 r = polite_get(s, url, throttle, allow_redirects=True, timeout=30)
+                last_status = r.status_code
                 if r.status_code != 200:
                     if is_paginated:
                         consecutive_empty_paginated += 1
@@ -74,6 +77,7 @@ def scrape() -> list[RawListing]:
                             # Skip rest of this parish's pages
                             continue
                     continue
+                saw_200 = True
                 new_count = 0
                 for raw in _parse(r.text):
                     if raw.url not in seen:
@@ -86,6 +90,10 @@ def scrape() -> list[RawListing]:
                     consecutive_empty_paginated = 0
             except Exception:  # noqa: BLE001
                 continue
+    # See golden_gates: a fully-blocked source must raise (-> recorded as failed)
+    # rather than return an empty list that masquerades as a clean 0.
+    if not saw_200:
+        raise RuntimeError(f"{SOURCE}: no successful response (last status {last_status})")
     return out
 
 
