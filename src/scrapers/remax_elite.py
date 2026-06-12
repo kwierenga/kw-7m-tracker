@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 from curl_cffi import requests as cf
 
 from ..models import RawListing
+from ..status import normalize_status
 from ._throttle import Throttle, polite_get
 
 SOURCE = "remax_elite"
@@ -70,12 +71,15 @@ def _parse(html: str) -> list[RawListing]:
     fetched_at = datetime.now(timezone.utc).isoformat()
     out: list[RawListing] = []
     for card in soup.find_all(class_="propertysearch_pb"):
-        # Defensive: skip non-sale cards if any leak through
-        badge = card.select_one(".badge_wrap .txt-infoRed")
-        if badge:
-            btxt = badge.get_text(" ", strip=True).lower()
-            if "rent" in btxt or "lease" in btxt:
-                continue
+        # The badge_wrap carries both transaction ("Sale"/"Rent") and
+        # availability ("Under Offer"/"Under Contract"/"Sold") labels — ~13% of
+        # cards are under offer/contract. Skip rent/lease, capture the rest as
+        # canonical status.
+        badge_wrap = card.select_one(".badge_wrap")
+        badge_text = badge_wrap.get_text(" ", strip=True) if badge_wrap else ""
+        if "rent" in badge_text.lower() or "lease" in badge_text.lower():
+            continue
+        status = normalize_status(badge_text)
 
         a = card.select_one("a.link_absolute_internal[href]") or card.find(
             "a", href=re.compile(r"/property/")
@@ -127,6 +131,7 @@ def _parse(html: str) -> list[RawListing]:
                 fetched_at=fetched_at,
                 listed_on_iso=None,
                 photo_url=photo_url,
+                status=status,
             )
         )
     return out

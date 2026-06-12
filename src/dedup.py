@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .geo import haversine_miles
 from .models import NormalizedListing
+from .status import merge_status
 
 
 def _close_in_geo(a: NormalizedListing, b: NormalizedListing) -> bool:
@@ -65,6 +66,7 @@ def _merge(a: NormalizedListing, b: NormalizedListing) -> tuple[NormalizedListin
         keyword_boost=a.keyword_boost or b.keyword_boost,
         listed_on_iso=listed_on,
         photo_url=a.photo_url or b.photo_url,
+        status=merge_status(a.status, b.status),
         canonical_id=winner_canon,
         contributing_source_ids=contrib,
     ), loser_canon

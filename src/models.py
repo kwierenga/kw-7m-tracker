@@ -21,6 +21,9 @@ class RawListing:
     fetched_at: str
     listed_on_iso: str | None = None  # listing's own publication date if exposed by site
     photo_url: str | None = None
+    # Source's own availability label, canonicalized via status.normalize_status:
+    # None (unknown) / "active" / "under_offer" / "sold" / "expired".
+    status: str | None = None
 
     @property
     def stable_id(self) -> str:
@@ -46,6 +49,10 @@ class NormalizedListing:
     keyword_boost: bool = False
     listed_on_iso: str | None = None
     photo_url: str | None = None
+    # Canonical availability status (see status.py). Drives the 'unavailable'
+    # bucket in diff.classify — sold/under_offer/expired listings are kept but
+    # held out of 'active'/'new'/'stale'.
+    status: str | None = None
     first_seen_iso: str | None = None
     last_seen_iso: str | None = None
     # Stable identity that survives source flakes. Set after normalize, before

@@ -31,7 +31,8 @@ CREATE TABLE IF NOT EXISTS listings (
     photo_url TEXT,
     first_seen_iso TEXT NOT NULL,
     last_seen_iso TEXT NOT NULL,
-    detail_fetched_iso TEXT
+    detail_fetched_iso TEXT,
+    status TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_listings_last_seen ON listings(last_seen_iso);
@@ -97,6 +98,9 @@ def _migrate(con: sqlite3.Connection) -> None:
         # (the page just doesn't expose a date) — otherwise we'd refetch
         # every run. Cleared (column wiped) only by manual DB surgery.
         con.execute("ALTER TABLE listings ADD COLUMN detail_fetched_iso TEXT")
+    if "status" not in listing_cols:
+        # Source's canonical availability status (see status.py). NULL = unknown.
+        con.execute("ALTER TABLE listings ADD COLUMN status TEXT")
 
     # Backfill canonical_id for legacy rows: seed with stable_id (preserves
     # current identity) and seed aliases from the parsed source:source_id.
@@ -278,7 +282,8 @@ def upsert_listings(con: sqlite3.Connection, listings: Iterable[dict], run_iso: 
                     listed_on_iso=COALESCE(?, listed_on_iso),
                     photo_url=COALESCE(?, photo_url),
                     last_seen_iso=?,
-                    detail_fetched_iso=COALESCE(?, detail_fetched_iso)
+                    detail_fetched_iso=COALESCE(?, detail_fetched_iso),
+                    status=COALESCE(?, status)
                 WHERE canonical_id=?
                 """,
                 (
@@ -301,6 +306,7 @@ def upsert_listings(con: sqlite3.Connection, listings: Iterable[dict], run_iso: 
                     L.get("photo_url"),
                     run_iso,
                     L.get("detail_fetched_iso"),
+                    L.get("status"),
                     canonical,
                 ),
             )
@@ -314,8 +320,8 @@ def upsert_listings(con: sqlite3.Connection, listings: Iterable[dict], run_iso: 
                     lat, lon, location_text, location_confidence,
                     matched_regions_json, keyword_boost,
                     listed_on_iso, photo_url, first_seen_iso, last_seen_iso,
-                    detail_fetched_iso
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    detail_fetched_iso, status
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 ON CONFLICT(stable_id) DO UPDATE SET
                     canonical_id=excluded.canonical_id,
                     sources_json=excluded.sources_json,
@@ -345,6 +351,7 @@ def upsert_listings(con: sqlite3.Connection, listings: Iterable[dict], run_iso: 
                     first_seen,
                     run_iso,
                     L.get("detail_fetched_iso"),
+                    L.get("status"),
                 ),
             )
             n_new += 1

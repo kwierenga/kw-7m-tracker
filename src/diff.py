@@ -23,6 +23,8 @@ import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
+from .status import is_available
+
 STALE_DAYS = 90
 RECENTLY_NEW_DAYS = 7
 
@@ -33,6 +35,10 @@ class DiffBuckets:
     still_active: list[dict]
     stale: list[dict]
     dropped_off: list[dict]
+    # Listings the source itself marks as sold / under offer / expired. Held out
+    # of new/active/stale regardless of age — the strongest available signal
+    # that a listing is not genuinely for sale. See status.py.
+    unavailable: list[dict]
 
 
 def _parse_iso(s: str | None) -> datetime | None:
@@ -61,7 +67,13 @@ def classify(
     new: list[dict] = []
     active: list[dict] = []
     stale: list[dict] = []
+    unavailable: list[dict] = []
     for row in seen_this_run:
+        # The source's own status wins over any age heuristic: a sold/under-
+        # offer/expired listing is not genuinely for sale no matter how fresh.
+        if not is_available(row.get("status")):
+            unavailable.append(row)
+            continue
         listed = _parse_iso(row.get("listed_on_iso"))
         first = _parse_iso(row.get("first_seen_iso"))
         if first is not None and first >= new_cutoff:
@@ -80,6 +92,7 @@ def classify(
         still_active=active,
         stale=stale,
         dropped_off=list(dropped_rows),
+        unavailable=unavailable,
     )
 
 

@@ -21,6 +21,7 @@ from curl_cffi import requests as cf
 
 from ..models import RawListing
 from ..photos import extract_first_img
+from ..status import normalize_status
 from ._throttle import Throttle, polite_get
 
 SOURCE = "sagicor_props"
@@ -135,6 +136,12 @@ def _parse(html: str) -> list[RawListing]:
         desc_el = card.select_one(".property_listing_content p")
         description = desc_el.get_text(" ", strip=True) if desc_el else None
 
+        # Shares golden_gates' theme markup; read the status badge when present.
+        badge_el = card.select_one(".badge_wraps .forsale_badge") or card.select_one(
+            ".forsale_badge"
+        )
+        status = normalize_status(badge_el.get_text(" ", strip=True)) if badge_el else None
+
         title_parts = [p for p in (ptype, location) if p]
         title = " — ".join(title_parts) if title_parts else (location or "(untitled)")
 
@@ -150,6 +157,7 @@ def _parse(html: str) -> list[RawListing]:
                 fetched_at=fetched_at,
                 listed_on_iso=None,
                 photo_url=extract_first_img(card, BASE),
+                status=status,
             )
         )
     return out

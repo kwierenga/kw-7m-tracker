@@ -9,6 +9,7 @@ from curl_cffi import requests as cf
 
 from ..models import RawListing
 from ..photos import extract_first_img
+from ..status import normalize_status
 from ._throttle import Throttle, polite_get
 
 SOURCE = "golden_gates"
@@ -95,6 +96,7 @@ def _parse(html: str) -> list[RawListing]:
 
         if "rent" in transaction.lower() or "lease" in transaction.lower():
             continue
+        status = normalize_status(transaction)
 
         title_parts = [p for p in (ptype, transaction.lstrip(" ")) if p]
         title = " — ".join(title_parts) if title_parts else "(untitled)"
@@ -117,6 +119,7 @@ def _parse(html: str) -> list[RawListing]:
                 fetched_at=fetched_at,
                 listed_on_iso=None,
                 photo_url=extract_first_img(card, BASE),
+                status=status,
             )
         )
     return out

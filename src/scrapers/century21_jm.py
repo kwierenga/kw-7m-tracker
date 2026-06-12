@@ -9,6 +9,7 @@ from curl_cffi import requests as cf
 
 from ..models import RawListing
 from ..photos import extract_first_img
+from ..status import normalize_status
 from ._throttle import Throttle, polite_get
 
 SOURCE = "century21_jm"
@@ -94,6 +95,7 @@ def _parse(html: str) -> list[RawListing]:
         trans_text = trans_el.get_text(" ", strip=True).lower() if trans_el else ""
         if "rent" in trans_text or "lease" in trans_text:
             continue
+        status = normalize_status(trans_text)
 
         type_el = card.select_one(".card-top ul li:first-child strong")
         ptype = type_el.get_text(" ", strip=True) if type_el else ""
@@ -121,6 +123,7 @@ def _parse(html: str) -> list[RawListing]:
                 fetched_at=fetched_at,
                 listed_on_iso=None,
                 photo_url=extract_first_img(card, BASE),
+                status=status,
             )
         )
     return out

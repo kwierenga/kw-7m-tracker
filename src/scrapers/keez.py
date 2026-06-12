@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from curl_cffi import requests as cf
 
 from ..models import RawListing
+from ..status import normalize_status
 from ._throttle import Throttle, polite_get
 
 SOURCE = "keez"
@@ -119,6 +120,9 @@ def _parse_items(items: list[dict], fetched_at: str) -> list[RawListing]:
             photo_url = first.get("medium") or first.get("large") or first.get("url")
 
         listed_on_iso = _to_iso(item.get("date_listed"))
+        # API exposes a structured status: 'active' / 'expired'. ~11% of the
+        # sale feed is expired (lapsed postings) — route those out of 'active'.
+        status = normalize_status(item.get("status_name") or item.get("status"))
 
         out.append(
             RawListing(
@@ -132,6 +136,7 @@ def _parse_items(items: list[dict], fetched_at: str) -> list[RawListing]:
                 fetched_at=fetched_at,
                 listed_on_iso=listed_on_iso,
                 photo_url=photo_url,
+                status=status,
             )
         )
     return out

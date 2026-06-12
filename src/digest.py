@@ -9,6 +9,7 @@ from jinja2 import Template
 
 from .diff import DiffBuckets, regions_for
 from .regions import REGIONS, by_slug
+from .status import STATUS_LABELS
 
 # Each region is really three searches: Homes (higher budget), Land (lower
 # budget), and listings whose property_type couldn't be determined. Render
@@ -271,6 +272,10 @@ PAGE_TEMPLATE = Template(
     background: var(--new-bg);
     color: var(--new-text);
   }
+  .pill-gone {
+    background: #6b7280;
+    color: #fff;
+  }
   .pill-boost {
     color: var(--boost);
     font-size: 1rem;
@@ -530,7 +535,8 @@ PAGE_TEMPLATE = Template(
   {% if total_drops %}<span class="count-drops" id="toggle-only-drops" role="button" tabindex="0" aria-pressed="false" title="Click to filter to price drops only">↓ {{ total_drops }} price drop{{ '' if total_drops == 1 else 's' }}</span> &middot;{% endif %}
   {{ total_active }} still active &middot;
   {{ total_stale }} stale &middot;
-  {{ total_dropped }} dropped off
+  {{ total_dropped }} dropped off{% if total_unavailable %} &middot;
+  {{ total_unavailable }} sold/under offer{% endif %}
 </p>
 
 <div class="filter-bar" id="filter-bar" hidden>
@@ -567,7 +573,7 @@ PAGE_TEMPLATE = Template(
     <h2>{{ region.name }}</h2>
     <div class="region-stats">
       {% if region.new_count %}<span class="count-new">{{ region.new_count }} new</span> &middot; {% endif %}
-      {{ region.active_count }} active{% if region.stale_count %} &middot; {{ region.stale_count }} stale{% endif %}{% if region.dropped_count %} &middot; {{ region.dropped_count }} dropped{% endif %}
+      {{ region.active_count }} active{% if region.stale_count %} &middot; {{ region.stale_count }} stale{% endif %}{% if region.dropped_count %} &middot; {{ region.dropped_count }} dropped{% endif %}{% if region.unavailable_count %} &middot; {{ region.unavailable_count }} sold/under offer{% endif %}
     </div>
   </div>
 
@@ -677,6 +683,23 @@ PAGE_TEMPLATE = Template(
           <span class="dropped-title">{{ L.title|truncate(70) }}</span>
           {% if L.primary_source %}<span class="src-pill">{{ L.primary_source }}</span>{% endif %}
           <span class="age">URL likely 404</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </details>
+    {% endif %}
+
+    {% if section.unavailable %}
+    <details>
+      <summary>{{ section.unavailable|length }} sold / under offer / expired</summary>
+      <ul class="compact-list">
+        {% for L in section.unavailable %}
+        <li{% if L.track_id %} data-id="{{ L.track_id }}"{% endif %}>
+          {% if L.status_label %}<span class="pill pill-gone">{{ L.status_label }}</span>{% endif %}
+          <span class="price">{{ L.price_label }}</span>
+          <span class="row-title"><a href="{{ L.primary_url }}">{{ L.title|truncate(70) }}</a></span>
+          {% if L.primary_source %}<span class="src-pill">{{ L.primary_source }}</span>{% endif %}
+          <span class="age">first seen {{ L.first_seen_label }}</span>
         </li>
         {% endfor %}
       </ul>
@@ -1043,6 +1066,7 @@ def _row_to_view(
     # Stable identity for client-side status tracking (localStorage keys).
     # canonical_id is preferred; stable_id is the legacy fallback.
     out["track_id"] = row.get("canonical_id") or row.get("stable_id") or ""
+    out["status_label"] = STATUS_LABELS.get(row.get("status") or "", "")
     out["price_was_label"] = ""
     if price_drops:
         cid = row.get("canonical_id")
@@ -1077,6 +1101,7 @@ def _empty_section(pt: str, region) -> dict:
         "still_active": [],
         "stale": [],
         "dropped_off": [],
+        "unavailable": [],
     }
 
 
@@ -1094,6 +1119,7 @@ def _section_has_anything(section: dict) -> bool:
         or section["still_active"]
         or section["stale"]
         or section["dropped_off"]
+        or section["unavailable"]
     )
 
 
@@ -1130,6 +1156,7 @@ def build_digest(
     assign(buckets.still_active, "still_active")
     assign(buckets.stale, "stale")
     assign(buckets.dropped_off, "dropped_off")
+    assign(buckets.unavailable, "unavailable")
 
     region_views = list(by_region.values())
     for v in region_views:
@@ -1142,8 +1169,10 @@ def build_digest(
         v["active_count"] = sum(len(s["still_active"]) for s in v["sections"].values())
         v["stale_count"] = sum(len(s["stale"]) for s in v["sections"].values())
         v["dropped_count"] = sum(len(s["dropped_off"]) for s in v["sections"].values())
+        v["unavailable_count"] = sum(len(s["unavailable"]) for s in v["sections"].values())
         v["has_anything"] = (
-            v["new_count"] + v["active_count"] + v["stale_count"] + v["dropped_count"] > 0
+            v["new_count"] + v["active_count"] + v["stale_count"]
+            + v["dropped_count"] + v["unavailable_count"] > 0
         )
 
     active_regions = [v for v in region_views if v["has_anything"]]
@@ -1153,6 +1182,7 @@ def build_digest(
     total_active = sum(v["active_count"] for v in region_views)
     total_stale = sum(v["stale_count"] for v in region_views)
     total_dropped = sum(v["dropped_count"] for v in region_views)
+    total_unavailable = sum(v["unavailable_count"] for v in region_views)
     total_drops = len(price_drops or {})
 
     date_label = date.today().isoformat()
@@ -1175,6 +1205,7 @@ def build_digest(
         total_active=total_active,
         total_stale=total_stale,
         total_dropped=total_dropped,
+        total_unavailable=total_unavailable,
         total_drops=total_drops,
         sources_label=", ".join(sources) or "(none)",
         sources_counts=sources_counts or {},

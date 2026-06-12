@@ -140,7 +140,8 @@ def run(dry_run: bool) -> int:
             f"[diff] new={len(buckets.new_since_last_run)} "
             f"active={len(buckets.still_active)} "
             f"stale={len(buckets.stale)} "
-            f"dropped={len(buckets.dropped_off)}"
+            f"dropped={len(buckets.dropped_off)} "
+            f"unavailable={len(buckets.unavailable)}"
         )
 
         write_run_log(
@@ -218,6 +219,7 @@ def run(dry_run: bool) -> int:
         "price_drops": len(price_drops),
         "active": len(buckets.still_active),
         "stale": len(buckets.stale),
+        "unavailable": len(buckets.unavailable),
         "new_by_region": new_by_region,
         "dropped_by_region": dropped_by_region,
         "sources_counts": sources_counts,
