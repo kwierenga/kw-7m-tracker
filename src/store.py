@@ -245,6 +245,15 @@ def find_price_drops(
     return {r["canonical_id"]: (r["old_p"], r["new_p"]) for r in rows}
 
 
+def tracker_epoch_iso(con: sqlite3.Connection) -> str | None:
+    """The earliest first_seen we've ever recorded — i.e. when the tracker
+    started observing. Used by diff.classify to tell whether a listing's
+    first_seen reflects its real age (it appeared during our watch) or just
+    our tenure (it already existed when we started, so its age is unknown)."""
+    row = con.execute("SELECT MIN(first_seen_iso) AS e FROM listings").fetchone()
+    return row["e"] if row else None
+
+
 def last_price_change_iso(con: sqlite3.Connection) -> dict[str, str]:
     """Returns {canonical_id: run_iso} of the most recent run at which a
     listing's price *changed* from its previous observation (up or down).

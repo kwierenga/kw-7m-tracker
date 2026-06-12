@@ -14,6 +14,7 @@ from src.store import (
     _migrate,
     find_price_drops,
     last_price_change_iso,
+    tracker_epoch_iso,
     upsert_listings,
 )
 
@@ -125,6 +126,18 @@ class PriceHistoryTests(unittest.TestCase):
             find_price_drops(con, "2026-05-03T00:00:00Z"),
             {"A": (500_000, 450_000)},
         )
+
+
+class TrackerEpochTests(unittest.TestCase):
+    def test_none_when_empty(self):
+        self.assertIsNone(tracker_epoch_iso(_connect()))
+
+    def test_returns_earliest_first_seen(self):
+        con = _connect()
+        upsert_listings(con, [_row("A", 500_000)], "2026-05-10T00:00:00Z")
+        upsert_listings(con, [_row("B", 400_000)], "2026-05-03T00:00:00Z")
+        upsert_listings(con, [_row("C", 300_000)], "2026-06-01T00:00:00Z")
+        self.assertEqual(tracker_epoch_iso(con), "2026-05-03T00:00:00Z")
 
 
 class LastPriceChangeTests(unittest.TestCase):

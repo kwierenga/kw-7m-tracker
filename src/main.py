@@ -23,6 +23,7 @@ from .store import (
     lookup_canonical_id,
     mint_canonical_id,
     reassign_aliases,
+    tracker_epoch_iso,
     upsert_listings,
     write_run_log,
 )
@@ -149,6 +150,7 @@ def run(dry_run: bool) -> int:
             seen, dropped, run_iso, prev_run,
             price_change_iso=price_change_iso,
             likely_sold_rows=likely_sold,
+            tracker_epoch_iso=tracker_epoch_iso(con),
         )
         print(
             f"[diff] new={len(buckets.new_since_last_run)} "

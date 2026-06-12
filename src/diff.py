@@ -27,6 +27,11 @@ from .status import is_available
 
 STALE_DAYS = 90
 RECENTLY_NEW_DAYS = 7
+# A listing's first_seen only reflects its real age if it appeared AFTER we
+# started watching. Listings first seen within this many days of the tracker's
+# epoch are treated as pre-existing (true age unknown), so their tenure doesn't
+# drive staleness. Small grace absorbs sources that backfill over the first runs.
+EPOCH_GRACE_DAYS = 2
 
 
 @dataclass
@@ -62,11 +67,18 @@ def classify(
     prev_run_iso: str | None = None,
     price_change_iso: dict[str, str] | None = None,
     likely_sold_rows: list[dict] | None = None,
+    tracker_epoch_iso: str | None = None,
 ) -> DiffBuckets:
     now = _parse_iso(run_iso) or datetime.now(timezone.utc)
     new_cutoff = now - timedelta(days=RECENTLY_NEW_DAYS)
     stale_cutoff = now - timedelta(days=STALE_DAYS)
     price_change_iso = price_change_iso or {}
+    # first_seen counts as a real age anchor only when it lands after this — i.e.
+    # the listing appeared during our watch, not before the tracker existed.
+    epoch = _parse_iso(tracker_epoch_iso)
+    reliable_first_cutoff = (
+        epoch + timedelta(days=EPOCH_GRACE_DAYS) if epoch is not None else None
+    )
     new: list[dict] = []
     active: list[dict] = []
     stale: list[dict] = []
@@ -82,10 +94,20 @@ def classify(
         if first is not None and first >= new_cutoff:
             new.append(row)
             continue
-        # Use the source's posted date when known, otherwise our first-seen.
-        # A listing the source says is 6 months old goes straight to stale on
-        # the day we discover it instead of waiting 90 days from first_seen.
-        age_anchor = listed if listed is not None else first
+        # Age anchor: the source's own posted date when known. Otherwise fall
+        # back to first_seen — but only when it's a trustworthy age signal (the
+        # listing appeared after our epoch). For the launch cohort, first_seen
+        # just reflects our tenure, not the listing's age, so we leave the age
+        # unknown and let status/price/disappearance signals speak instead of
+        # fabricating staleness.
+        reliable_first = first
+        if (
+            reliable_first is not None
+            and reliable_first_cutoff is not None
+            and reliable_first < reliable_first_cutoff
+        ):
+            reliable_first = None
+        age_anchor = listed if listed is not None else reliable_first
         if age_anchor is not None and age_anchor < stale_cutoff:
             # Rescue from stale when the seller moved the price recently: a
             # price change within the stale window is strong evidence the

@@ -90,6 +90,33 @@ class ClassifyTests(unittest.TestCase):
         self.assertEqual([r["stable_id"] for r in b.stale], ["abandoned"])
         self.assertEqual(b.still_active, [])
 
+    def test_launch_cohort_old_first_seen_is_not_stale(self):
+        # Listing first seen AT the tracker epoch with no listed_on: its true
+        # age is unknown (it predated our watch), so tenure must not make it
+        # stale — it stays active.
+        epoch = self.now - timedelta(days=200)
+        row = _row(epoch, sid="preexisting")  # first_seen == epoch
+        b = classify([row], [], self.run_iso, tracker_epoch_iso=_iso(epoch))
+        self.assertEqual([r["stable_id"] for r in b.still_active], ["preexisting"])
+        self.assertEqual(b.stale, [])
+
+    def test_appeared_after_epoch_old_first_seen_goes_stale(self):
+        # Same age, but first seen well after the epoch → it genuinely appeared
+        # during our watch and has been visible 90+ days → stale.
+        epoch = self.now - timedelta(days=200)
+        appeared = self.now - timedelta(days=150)  # > epoch + grace
+        row = _row(appeared, sid="watched")
+        b = classify([row], [], self.run_iso, tracker_epoch_iso=_iso(epoch))
+        self.assertEqual([r["stable_id"] for r in b.stale], ["watched"])
+        self.assertEqual(b.still_active, [])
+
+    def test_launch_cohort_with_old_listed_on_still_stale(self):
+        # A real source date is authoritative regardless of the epoch.
+        epoch = self.now - timedelta(days=200)
+        row = _row(epoch, listed_on=self.now - timedelta(days=STALE_DAYS + 5), sid="dated")
+        b = classify([row], [], self.run_iso, tracker_epoch_iso=_iso(epoch))
+        self.assertEqual([r["stable_id"] for r in b.stale], ["dated"])
+
     def test_recent_price_change_rescues_old_listing_from_stale(self):
         # Old enough to be stale, but the price moved within the stale window
         # → strong 'still live' evidence, so it stays active.
