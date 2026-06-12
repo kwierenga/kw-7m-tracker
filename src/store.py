@@ -245,6 +245,33 @@ def find_price_drops(
     return {r["canonical_id"]: (r["old_p"], r["new_p"]) for r in rows}
 
 
+def last_price_change_iso(con: sqlite3.Connection) -> dict[str, str]:
+    """Returns {canonical_id: run_iso} of the most recent run at which a
+    listing's price *changed* from its previous observation (up or down).
+
+    A recent price move is strong evidence a listing is still actively for
+    sale — sellers adjust price to move unsold stock, while sold listings go
+    static. diff.classify uses this to rescue an otherwise-stale (old) listing
+    back into 'active'. Listings whose price has never changed are absent."""
+    rows = con.execute(
+        """
+        WITH seq AS (
+          SELECT canonical_id, run_iso, price_usd,
+                 LAG(price_usd) OVER (
+                   PARTITION BY canonical_id ORDER BY run_iso
+                 ) AS prev_p
+          FROM price_history
+          WHERE price_usd IS NOT NULL
+        )
+        SELECT canonical_id, MAX(run_iso) AS last_change
+        FROM seq
+        WHERE prev_p IS NOT NULL AND price_usd <> prev_p
+        GROUP BY canonical_id
+        """
+    ).fetchall()
+    return {r["canonical_id"]: r["last_change"] for r in rows}
+
+
 def upsert_listings(con: sqlite3.Connection, listings: Iterable[dict], run_iso: str) -> tuple[int, int]:
     """Returns (n_new, n_updated). Each listing must have a canonical_id assigned.
     Side effect: writes a price_history row per listing-with-price-this-run."""

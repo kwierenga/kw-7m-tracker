@@ -90,6 +90,27 @@ class ClassifyTests(unittest.TestCase):
         self.assertEqual([r["stable_id"] for r in b.stale], ["abandoned"])
         self.assertEqual(b.still_active, [])
 
+    def test_recent_price_change_rescues_old_listing_from_stale(self):
+        # Old enough to be stale, but the price moved within the stale window
+        # → strong 'still live' evidence, so it stays active.
+        row = _row(self.now - timedelta(days=STALE_DAYS + 5), sid="moved")
+        row["canonical_id"] = "moved"
+        changed = _iso(self.now - timedelta(days=10))
+        b = classify([row], [], self.run_iso,
+                     price_change_iso={"moved": changed})
+        self.assertEqual([r["stable_id"] for r in b.still_active], ["moved"])
+        self.assertEqual(b.stale, [])
+
+    def test_old_price_change_does_not_rescue(self):
+        # A price change that predates the stale window does not rescue.
+        row = _row(self.now - timedelta(days=STALE_DAYS + 5), sid="longgone")
+        row["canonical_id"] = "longgone"
+        changed = _iso(self.now - timedelta(days=STALE_DAYS + 1))
+        b = classify([row], [], self.run_iso,
+                     price_change_iso={"longgone": changed})
+        self.assertEqual([r["stable_id"] for r in b.stale], ["longgone"])
+        self.assertEqual(b.still_active, [])
+
     def test_first_seen_missing_falls_through_to_active(self):
         # A row with no first_seen_iso (data corruption) shouldn't crash —
         # neither new nor stale, lands in active.

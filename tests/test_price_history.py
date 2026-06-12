@@ -13,6 +13,7 @@ from src.store import (
     SCHEMA,
     _migrate,
     find_price_drops,
+    last_price_change_iso,
     upsert_listings,
 )
 
@@ -124,6 +125,39 @@ class PriceHistoryTests(unittest.TestCase):
             find_price_drops(con, "2026-05-03T00:00:00Z"),
             {"A": (500_000, 450_000)},
         )
+
+
+class LastPriceChangeTests(unittest.TestCase):
+    def test_no_change_returns_empty(self):
+        con = _connect()
+        upsert_listings(con, [_row("A", 500_000)], "2026-05-01T00:00:00Z")
+        upsert_listings(con, [_row("A", 500_000)], "2026-05-02T00:00:00Z")
+        self.assertEqual(last_price_change_iso(con), {})
+
+    def test_single_sighting_returns_empty(self):
+        con = _connect()
+        upsert_listings(con, [_row("A", 500_000)], "2026-05-01T00:00:00Z")
+        self.assertEqual(last_price_change_iso(con), {})
+
+    def test_change_returns_run_of_change(self):
+        con = _connect()
+        upsert_listings(con, [_row("A", 500_000)], "2026-05-01T00:00:00Z")
+        upsert_listings(con, [_row("A", 450_000)], "2026-05-02T00:00:00Z")
+        self.assertEqual(last_price_change_iso(con), {"A": "2026-05-02T00:00:00Z"})
+
+    def test_increase_counts_as_change(self):
+        con = _connect()
+        upsert_listings(con, [_row("A", 500_000)], "2026-05-01T00:00:00Z")
+        upsert_listings(con, [_row("A", 525_000)], "2026-05-02T00:00:00Z")
+        self.assertEqual(last_price_change_iso(con), {"A": "2026-05-02T00:00:00Z"})
+
+    def test_returns_most_recent_change(self):
+        con = _connect()
+        upsert_listings(con, [_row("A", 500_000)], "2026-05-01T00:00:00Z")
+        upsert_listings(con, [_row("A", 450_000)], "2026-05-02T00:00:00Z")  # change
+        upsert_listings(con, [_row("A", 450_000)], "2026-05-03T00:00:00Z")  # no change
+        upsert_listings(con, [_row("A", 400_000)], "2026-05-04T00:00:00Z")  # change
+        self.assertEqual(last_price_change_iso(con), {"A": "2026-05-04T00:00:00Z"})
 
 
 if __name__ == "__main__":

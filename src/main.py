@@ -17,6 +17,7 @@ from .normalize import normalize_all
 from .store import (
     connect,
     find_price_drops,
+    last_price_change_iso,
     listings_dropped_in_run,
     listings_seen_in_run,
     lookup_canonical_id,
@@ -114,6 +115,11 @@ def run(dry_run: bool) -> int:
         price_drops = find_price_drops(con, run_iso)
         print(f"[price] drops={len(price_drops)}")
 
+        # Per-listing date of the last price *change* (up or down). Feeds the
+        # stale-rescue in classify: a recent price move means the listing is
+        # still live even if it's old.
+        price_change_iso = last_price_change_iso(con)
+
         seen = listings_seen_in_run(con, run_iso)
         # Bug fix: only flag as dropped when ALL of a listing's sources scraped
         # successfully this run. Otherwise a transient failure spawns phantom
@@ -135,7 +141,7 @@ def run(dry_run: bool) -> int:
             )
         else:
             dropped = []
-        buckets = classify(seen, dropped, run_iso, prev_run)
+        buckets = classify(seen, dropped, run_iso, prev_run, price_change_iso=price_change_iso)
         print(
             f"[diff] new={len(buckets.new_since_last_run)} "
             f"active={len(buckets.still_active)} "

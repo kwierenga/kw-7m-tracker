@@ -60,10 +60,12 @@ def classify(
     dropped_rows: list[dict],
     run_iso: str,
     prev_run_iso: str | None = None,
+    price_change_iso: dict[str, str] | None = None,
 ) -> DiffBuckets:
     now = _parse_iso(run_iso) or datetime.now(timezone.utc)
     new_cutoff = now - timedelta(days=RECENTLY_NEW_DAYS)
     stale_cutoff = now - timedelta(days=STALE_DAYS)
+    price_change_iso = price_change_iso or {}
     new: list[dict] = []
     active: list[dict] = []
     stale: list[dict] = []
@@ -84,7 +86,14 @@ def classify(
         # the day we discover it instead of waiting 90 days from first_seen.
         age_anchor = listed if listed is not None else first
         if age_anchor is not None and age_anchor < stale_cutoff:
-            stale.append(row)
+            # Rescue from stale when the seller moved the price recently: a
+            # price change within the stale window is strong evidence the
+            # listing is still live, which beats the age heuristic.
+            change = _parse_iso(price_change_iso.get(row.get("canonical_id") or ""))
+            if change is not None and change >= stale_cutoff:
+                active.append(row)
+            else:
+                stale.append(row)
         else:
             active.append(row)
     return DiffBuckets(
