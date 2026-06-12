@@ -6,6 +6,13 @@ from .status import merge_status
 
 
 def _close_in_geo(a: NormalizedListing, b: NormalizedListing) -> bool:
+    # Only trust a geo match when BOTH sides have EXACT coordinates. Approximate
+    # coords are town centroids — every listing in a town resolves to the same
+    # point, so a distance-based merge there collapses distinct same-town
+    # listings into one (hiding a real for-sale listing). Biasing toward showing
+    # a possible duplicate beats silently merging away a genuine listing.
+    if a.location_confidence != "exact" or b.location_confidence != "exact":
+        return False
     if a.lat is None or b.lat is None:
         return False
     return haversine_miles(a.lat, a.lon, b.lat, b.lon) * 1609.34 < 100  # ~100m
