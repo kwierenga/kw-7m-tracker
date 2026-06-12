@@ -506,6 +506,30 @@ PAGE_TEMPLATE = Template(
   body.only-drops [data-id]:not([data-drop]) { display: none; }
   body.only-drops .empty-line { display: none; }
 
+  /* "new since your last visit" — banner + per-card accent + filter.
+     data-since-visit is set by JS on any [data-first-seen] newer than the
+     visitor's stored last-visit timestamp. */
+  .visit-banner {
+    display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+    margin: 0 0 1rem; padding: 0.6rem 0.85rem;
+    background: var(--new-bg); color: var(--new-text);
+    border-radius: 8px; font-size: 0.9rem;
+  }
+  .visit-banner-text { font-weight: 700; }
+  .visit-btn {
+    font: inherit; font-size: 0.82rem; cursor: pointer;
+    padding: 0.25rem 0.7rem; border-radius: 6px;
+    border: 1px solid currentColor; background: transparent; color: inherit;
+  }
+  .visit-btn[aria-pressed="true"] { background: currentColor; }
+  .visit-btn[aria-pressed="true"] .label, .visit-btn[aria-pressed="true"] { }
+  .visit-btn-ghost { opacity: 0.75; border-style: dashed; }
+  /* subtle accent so newly-arrived listings stand out even when not filtering */
+  [data-since-visit].card { box-shadow: -3px 0 0 0 var(--new-text); }
+  [data-since-visit]:not(.card) { box-shadow: -3px 0 0 0 var(--new-text); }
+  body.only-since-visit [data-id]:not([data-since-visit]) { display: none; }
+  body.only-since-visit .empty-line { display: none; }
+
   @media (max-width: 600px) {
     body { padding: 0.75rem 0.85rem 3rem; font-size: 15px; }
     .card {
@@ -538,6 +562,12 @@ PAGE_TEMPLATE = Template(
   {{ total_dropped }} dropped off{% if total_unavailable %} &middot;
   {{ total_unavailable }} sold/under offer{% endif %}
 </p>
+
+<div class="visit-banner" id="visit-banner" hidden role="status">
+  <span class="visit-banner-text" id="visit-banner-text"></span>
+  <button type="button" class="visit-btn" id="visit-toggle" aria-pressed="false">Show only these</button>
+  <button type="button" class="visit-btn visit-btn-ghost" id="visit-mark-seen" title="Reset — treat everything as seen">Mark all seen</button>
+</div>
 
 <div class="filter-bar" id="filter-bar" hidden>
   <label><input type="checkbox" id="filter-only-interested"> Only interested</label>
@@ -584,7 +614,7 @@ PAGE_TEMPLATE = Template(
     {% if section.new_since_last_run %}
       <ul class="listings">
       {% for L in section.new_since_last_run %}
-        <li class="card is-new{% if L.keyword_boost %} is-boost{% endif %}"{% if L.track_id %} data-id="{{ L.track_id }}"{% endif %}>
+        <li class="card is-new{% if L.keyword_boost %} is-boost{% endif %}"{% if L.track_id %} data-id="{{ L.track_id }}"{% endif %} data-first-seen="{{ L.first_seen_iso }}">
           {% if L.photo_url %}
           <a class="card-thumb-link" href="{{ L.primary_url }}" tabindex="-1"><img class="card-thumb" src="{{ L.photo_url }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('hidden')"></a>
           {% else %}
@@ -630,7 +660,7 @@ PAGE_TEMPLATE = Template(
       <summary>{{ section.still_active|length }} still active</summary>
       <ul class="compact-list">
         {% for L in section.still_active %}
-        <li{% if L.track_id %} data-id="{{ L.track_id }}"{% endif %}>
+        <li{% if L.track_id %} data-id="{{ L.track_id }}"{% endif %} data-first-seen="{{ L.first_seen_iso }}">
           <span class="price">{{ L.price_label }}</span>
           {% if L.price_was_label %}<span class="price-was">↓ {{ L.price_was_label }}</span>{% endif %}
           <span class="row-title"><a href="{{ L.primary_url }}">{{ L.title|truncate(70) }}</a></span>
@@ -655,7 +685,7 @@ PAGE_TEMPLATE = Template(
       <summary>{{ section.stale|length }} stale (90+ days)</summary>
       <ul class="compact-list">
         {% for L in section.stale %}
-        <li{% if L.track_id %} data-id="{{ L.track_id }}"{% endif %}>
+        <li{% if L.track_id %} data-id="{{ L.track_id }}"{% endif %} data-first-seen="{{ L.first_seen_iso }}">
           <span class="price">{{ L.price_label }}</span>
           <span class="row-title"><a href="{{ L.primary_url }}">{{ L.title|truncate(70) }}</a></span>
           {% if L.primary_source %}<span class="src-pill">{{ L.primary_source }}</span>{% endif %}
@@ -694,7 +724,7 @@ PAGE_TEMPLATE = Template(
       <summary>{{ section.unavailable|length }} sold / under offer / expired</summary>
       <ul class="compact-list">
         {% for L in section.unavailable %}
-        <li{% if L.track_id %} data-id="{{ L.track_id }}"{% endif %}>
+        <li{% if L.track_id %} data-id="{{ L.track_id }}"{% endif %} data-first-seen="{{ L.first_seen_iso }}">
           {% if L.status_label %}<span class="pill pill-gone">{{ L.status_label }}</span>{% endif %}
           <span class="price">{{ L.price_label }}</span>
           <span class="row-title"><a href="{{ L.primary_url }}">{{ L.title|truncate(70) }}</a></span>
@@ -923,6 +953,60 @@ PAGE_TEMPLATE = Template(
     });
     syncDropsToggle();
   }
+
+  // --- "new since your last visit" ---
+  // Remembers when THIS visitor last opened the page (not when the bot last
+  // ran), and flags every listing first seen since then — across new/active/
+  // stale/unavailable — so an intermittent reviewer never misses a listing
+  // that appeared on a day they didn't look. Works for any gap length.
+  var VISIT_KEY = 'kw7m_last_visit_v1';
+  (function initVisit() {
+    var prev = readJSON(VISIT_KEY, null);
+    var prevMs = (typeof prev === 'number') ? prev : null;
+    var cards = document.querySelectorAll('[data-first-seen]');
+    var count = 0;
+    var seenIds = {};
+    for (var i = 0; i < cards.length; i++) {
+      var fs = cards[i].getAttribute('data-first-seen');
+      var t = fs ? Date.parse(fs) : NaN;
+      if (prevMs !== null && !isNaN(t) && t > prevMs) {
+        cards[i].setAttribute('data-since-visit', '1');  // mark every instance
+        var id = cards[i].getAttribute('data-id');
+        if (id) { if (!seenIds[id]) { seenIds[id] = 1; count++; } }
+        else { count++; }
+      }
+    }
+    var banner = document.getElementById('visit-banner');
+    if (banner && prevMs !== null && count > 0) {
+      var txt = document.getElementById('visit-banner-text');
+      var when = new Date(prevMs).toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
+      if (txt) {
+        txt.textContent = '✨ ' + count + (count === 1 ? ' listing' : ' listings')
+          + ' new since your last visit (' + when + ')';
+      }
+      banner.removeAttribute('hidden');
+      var toggle = document.getElementById('visit-toggle');
+      if (toggle) {
+        toggle.addEventListener('click', function () {
+          var on = !document.body.classList.contains('only-since-visit');
+          document.body.classList.toggle('only-since-visit', on);
+          toggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+          toggle.textContent = on ? 'Show all' : 'Show only these';
+        });
+      }
+      var markSeen = document.getElementById('visit-mark-seen');
+      if (markSeen) {
+        markSeen.addEventListener('click', function () {
+          var hl = document.querySelectorAll('[data-since-visit]');
+          for (var j = 0; j < hl.length; j++) hl[j].removeAttribute('data-since-visit');
+          document.body.classList.remove('only-since-visit');
+          banner.setAttribute('hidden', '');
+        });
+      }
+    }
+    // Advance the stored last-visit to now — AFTER computing the delta above.
+    writeJSON(VISIT_KEY, Date.now());
+  })();
 
   applyAll();
 })();
