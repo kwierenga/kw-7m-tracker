@@ -134,14 +134,22 @@ def run(dry_run: bool) -> int:
         # even though they're still active. URL probe catches that — only
         # 404/410 confirms the drop.
         if candidates:
-            dropped, false_drops = verify_dropped(candidates)
+            dropped, likely_sold, false_drops = verify_dropped(
+                candidates, scrapers.COMPLETE_COVERAGE_SOURCES
+            )
             print(
                 f"[verify-drops] candidates={len(candidates)} "
-                f"confirmed={len(dropped)} false_drops={len(false_drops)}"
+                f"confirmed={len(dropped)} likely_sold={len(likely_sold)} "
+                f"false_drops={len(false_drops)}"
             )
         else:
             dropped = []
-        buckets = classify(seen, dropped, run_iso, prev_run, price_change_iso=price_change_iso)
+            likely_sold = []
+        buckets = classify(
+            seen, dropped, run_iso, prev_run,
+            price_change_iso=price_change_iso,
+            likely_sold_rows=likely_sold,
+        )
         print(
             f"[diff] new={len(buckets.new_since_last_run)} "
             f"active={len(buckets.still_active)} "
@@ -226,6 +234,7 @@ def run(dry_run: bool) -> int:
         "active": len(buckets.still_active),
         "stale": len(buckets.stale),
         "unavailable": len(buckets.unavailable),
+        "likely_sold": len(likely_sold),
         "new_by_region": new_by_region,
         "dropped_by_region": dropped_by_region,
         "sources_counts": sources_counts,

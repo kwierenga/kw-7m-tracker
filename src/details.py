@@ -114,14 +114,26 @@ ProbeFn = Callable[[str], int | None]
 
 
 def _classify_dropped_candidates(
-    candidates: list[dict], probe: ProbeFn
-) -> tuple[list[dict], list[dict]]:
-    """Pure decision logic, separated from HTTP for testability. A listing is
-    confirmed dropped only when EVERY one of its source URLs probes as dead
-    (404/410). Any 200, redirect, 5xx, network error, or empty URL list falls
-    through to the false-drops bucket — biasing toward silence per the same
-    rationale as listings_dropped_in_run's flake guard."""
+    candidates: list[dict],
+    probe: ProbeFn,
+    complete_sources: frozenset[str] | set[str] = frozenset(),
+) -> tuple[list[dict], list[dict], list[dict]]:
+    """Pure decision logic, separated from HTTP for testability. Returns
+    (confirmed_dropped, likely_sold, false_drops):
+
+    - confirmed_dropped: EVERY source URL probes as dead (404/410) — the page
+      itself is gone.
+    - likely_sold: the listing vanished from our scrape but EVERY URL still
+      serves (HTTP 200) AND every source is complete-coverage. On sites that
+      never take sold pages down, the agent pulling a listing from their active
+      feed while leaving the page up is the strongest available 'sold/withdrawn'
+      signal. Gated to complete_sources so coverage-limited feeds (realtor.com
+      page rotation) — which drop listings without a sale — never qualify.
+    - false_drops: everything else (mixed/200 on a limited source, redirect,
+      5xx, network error, empty URL list) — biased toward silence.
+    """
     confirmed: list[dict] = []
+    likely_sold: list[dict] = []
     false_drops: list[dict] = []
     for row in candidates:
         try:
@@ -131,21 +143,36 @@ def _classify_dropped_candidates(
         if not urls:
             false_drops.append(row)
             continue
-        if all(probe(u) in _DEAD_STATUSES for u in urls):
+        statuses = [probe(u) for u in urls]
+        if all(s in _DEAD_STATUSES for s in statuses):
             confirmed.append(row)
+            continue
+        try:
+            sources = json.loads(row.get("sources_json") or "[]")
+        except json.JSONDecodeError:
+            sources = []
+        if (
+            all(s == 200 for s in statuses)
+            and sources
+            and all(src in complete_sources for src in sources)
+        ):
+            likely_sold.append(row)
         else:
             false_drops.append(row)
-    return confirmed, false_drops
+    return confirmed, likely_sold, false_drops
 
 
-def verify_dropped(candidates: list[dict]) -> tuple[list[dict], list[dict]]:
-    """For each candidate dropped listing, fetch its source URL(s) and only
-    confirm the drop when every URL returns 404/410. Returns
-    (confirmed_dropped, false_drops). The candidate count is small in
-    practice (single-digit per run) so a one-off session with the same
-    Throttle scrapers use is fine."""
+def verify_dropped(
+    candidates: list[dict],
+    complete_sources: frozenset[str] | set[str] = frozenset(),
+) -> tuple[list[dict], list[dict], list[dict]]:
+    """For each candidate dropped listing, fetch its source URL(s) and split
+    into (confirmed_dropped, likely_sold, false_drops) per
+    _classify_dropped_candidates. The candidate count is small in practice
+    (single-digit per run) so a one-off session with the same Throttle scrapers
+    use is fine."""
     if not candidates:
-        return [], []
+        return [], [], []
     throttle = Throttle()
     with cf.Session(impersonate="chrome131") as s:
         def _probe(url: str) -> int | None:
@@ -155,4 +182,4 @@ def verify_dropped(candidates: list[dict]) -> tuple[list[dict], list[dict]]:
             except Exception:  # noqa: BLE001
                 return None
 
-        return _classify_dropped_candidates(candidates, _probe)
+        return _classify_dropped_candidates(candidates, _probe, complete_sources)

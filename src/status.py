@@ -22,8 +22,10 @@ bucket regardless of age.
 """
 from __future__ import annotations
 
-# Canonical statuses that mean "not freely available right now".
-UNAVAILABLE_STATUSES = ("under_offer", "sold", "expired")
+# Canonical statuses that mean "not freely available right now". "likely_sold"
+# is inferred (not from a source label) when a listing vanishes from a complete-
+# coverage feed while its page still resolves — see details._classify_dropped_candidates.
+UNAVAILABLE_STATUSES = ("under_offer", "sold", "expired", "likely_sold")
 
 # Human labels for the digest.
 STATUS_LABELS = {
@@ -31,6 +33,7 @@ STATUS_LABELS = {
     "under_offer": "Under offer",
     "sold": "Sold",
     "expired": "Expired",
+    "likely_sold": "Likely sold",
 }
 
 

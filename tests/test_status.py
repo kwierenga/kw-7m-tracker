@@ -89,6 +89,18 @@ class ClassifyUnavailableTests(unittest.TestCase):
         self.assertEqual(b.unavailable, [])
         self.assertEqual({r["stable_id"] for r in b.new_since_last_run}, {"A", "N"})
 
+    def test_likely_sold_rows_join_unavailable_tagged(self):
+        gone = {"stable_id": "G", "canonical_id": "G", "first_seen_iso": None,
+                "last_seen_iso": None, "listed_on_iso": None, "status": None}
+        b = classify([], [], self.run_iso, likely_sold_rows=[gone])
+        self.assertEqual([r["stable_id"] for r in b.unavailable], ["G"])
+        self.assertEqual(b.unavailable[0]["status"], "likely_sold")
+
+    def test_likely_sold_does_not_mutate_caller_row(self):
+        gone = {"stable_id": "G", "status": None}
+        classify([], [], self.run_iso, likely_sold_rows=[gone])
+        self.assertIsNone(gone["status"])  # classify copied the row, didn't mutate
+
 
 class ScraperStatusExtractionTests(unittest.TestCase):
     def test_keez_maps_expired_status(self):

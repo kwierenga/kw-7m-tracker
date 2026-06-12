@@ -23,3 +23,20 @@ ALL_SCRAPERS = [
     ("sagicor_props", scrape_sagicor_props),
     ("xposure", scrape_xposure_manual),
 ]
+
+# Sources whose scrape captures the COMPLETE active set every run, so a listing
+# vanishing from the feed (while its URL still resolves) is a trustworthy
+# "removed from sale / likely sold" signal rather than scrape-window noise.
+#
+# Strict criterion — include a source only when BOTH hold:
+#   1. pagination runs to exhaustion (not a page cap that the active set could
+#      outgrow — a cap near the listing count makes still-active listings
+#      silently fall off the tail and look 'sold'), and
+#   2. the feed lists every active record (no server-side rotation).
+#
+# keez qualifies: its API paginates until next_page_url is null, with a 2000/
+# parish ceiling against ~1k actual. realtor.com is explicitly excluded (it
+# rotates a page-1 window). The other paginated sites have MAX_PAGES caps
+# uncomfortably close to their counts (century21 ~177/180) — add them here only
+# after confirming the cap comfortably exceeds the live count.
+COMPLETE_COVERAGE_SOURCES = frozenset({"keez"})

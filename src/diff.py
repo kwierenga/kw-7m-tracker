@@ -61,6 +61,7 @@ def classify(
     run_iso: str,
     prev_run_iso: str | None = None,
     price_change_iso: dict[str, str] | None = None,
+    likely_sold_rows: list[dict] | None = None,
 ) -> DiffBuckets:
     now = _parse_iso(run_iso) or datetime.now(timezone.utc)
     new_cutoff = now - timedelta(days=RECENTLY_NEW_DAYS)
@@ -96,6 +97,15 @@ def classify(
                 stale.append(row)
         else:
             active.append(row)
+
+    # Listings that vanished from a complete-coverage feed but whose page still
+    # resolves — inferred 'likely sold'. Tagged so the digest shows the right
+    # pill, then grouped with the other unavailable listings.
+    for row in likely_sold_rows or []:
+        row = dict(row)
+        row["status"] = "likely_sold"
+        unavailable.append(row)
+
     return DiffBuckets(
         new_since_last_run=new,
         still_active=active,
