@@ -1,132 +1,185 @@
-"""caribbeanrealestatemls.com - Next.js, listings live in __NEXT_DATA__ JSON."""
+"""caribbeanrealestatemls.com — read through the site's public MCP catalogue.
+
+The site was rebuilt in 2026-09: the Next.js __NEXT_DATA__ payload and the
+/real-estate/ URLs the old HTML scraper relied on are gone, and its llms.txt
+asks automated clients to query the read-only catalogue instead of scraping
+pages. The catalogue returns the asking price in the source currency,
+property-level coordinates and status. Anonymous limits are 20 requests/minute
+and 25 rows per search, so a full Jamaica walk (~400 rows) is ~17 paced calls.
+
+25-row pages exceed the server's payload ceiling, so it drops media from them —
+most listings arrive without a photo.
+"""
 from __future__ import annotations
 
 import json
 import re
+import time
 from datetime import datetime, timezone
 
-from bs4 import BeautifulSoup
-from curl_cffi import requests as cf
+import httpx
 
 from ..models import RawListing
-from ._throttle import Throttle, polite_get
+from ..status import normalize_status
 
 SOURCE = "caribbean_mls"
 BASE = "https://caribbeanrealestatemls.com"
-URLS = [f"{BASE}/destinations/jamaica/"]
+MEDIA_BASE = "https://api.caribbeanrealestatemls.com"
+MCP_URL = "https://mcp.caribbeanrealestatemls.com/mcp/"
+MARKET = "jamaica"
+PAGE_SIZE = 25  # server maximum per search
+MAX_PAGES = 40  # 1,000 rows — ~2.5x the Jamaica inventory in 2026-09
+REQUEST_GAP_S = 3.5  # keeps a full walk under the anonymous 20 requests/minute
+PROTOCOL_VERSION = "2025-03-26"
 
 
-def scrape() -> list[RawListing]:
+def scrape(transport: httpx.BaseTransport | None = None) -> list[RawListing]:
+    fetched_at = datetime.now(timezone.utc).isoformat()
     out: list[RawListing] = []
-    throttle = Throttle()
-    with cf.Session(impersonate="chrome131") as s:
-        for url in URLS:
-            try:
-                r = polite_get(s, url, throttle, allow_redirects=True, timeout=30)
-                if r.status_code != 200:
-                    continue
-                out.extend(_parse(r.text))
-            except Exception:  # noqa: BLE001
-                continue
+    seen: set[str] = set()
+    with httpx.Client(timeout=30, transport=transport) as client:
+        catalogue = _Catalogue(client)
+        catalogue.initialize()
+        offset = 0
+        for _ in range(MAX_PAGES):
+            page = catalogue.call_tool(
+                "catalog_search_properties",
+                {"region": MARKET, "sort": "newest", "limit": PAGE_SIZE, "offset": offset},
+            )
+            for raw in _parse_rows(page.get("results") or [], fetched_at):
+                # 'newest' order shifts when a listing is published mid-walk,
+                # which can repeat a row across pages.
+                if raw.source_id not in seen:
+                    seen.add(raw.source_id)
+                    out.append(raw)
+            if not page.get("has_more"):
+                break
+            offset = page["next_offset"]
     return out
 
 
-def _parse(html: str) -> list[RawListing]:
-    soup = BeautifulSoup(html, "lxml")
-    tag = soup.find("script", id="__NEXT_DATA__")
-    if not tag or not tag.string:
-        return []
-    try:
-        data = json.loads(tag.string)
-    except json.JSONDecodeError:
-        return []
-    page_props = data.get("props", {}).get("pageProps", {})
-    page_data = page_props.get("pageData", {}) or {}
-    properties = (
-        page_data.get("properties")
-        or page_props.get("properties")
-        or page_props.get("results")
-        or page_props.get("items")
-        or []
-    )
-    fetched_at = datetime.now(timezone.utc).isoformat()
-    out: list[RawListing] = []
-    for prop in properties:
-        if not isinstance(prop, dict):
-            continue
-        source_id = str(prop.get("id") or prop.get("uuid") or prop.get("slug") or "")
-        if not source_id:
-            continue
-        public_url = prop.get("public_url") or prop.get("url") or ""
-        url = public_url if public_url.startswith("http") else BASE + public_url
+class _Catalogue:
+    """Just enough of the MCP streamable-HTTP protocol to call tools."""
 
-        title = prop.get("title") or prop.get("name") or prop.get("type") or "(untitled)"
-        ptype = prop.get("type") or prop.get("property_type") or ""
-        if ptype and ptype.lower() not in title.lower():
+    def __init__(self, client: httpx.Client) -> None:
+        self._client = client
+        self._session_id: str | None = None
+        self._request_id = 0
+        self._last_request = float("-inf")
+
+    def initialize(self) -> None:
+        self._post({
+            "jsonrpc": "2.0",
+            "id": self._new_id(),
+            "method": "initialize",
+            "params": {
+                "protocolVersion": PROTOCOL_VERSION,
+                "capabilities": {},
+                "clientInfo": {"name": "kw-7m-tracker", "version": "1.0"},
+            },
+        })
+        self._post({"jsonrpc": "2.0", "method": "notifications/initialized"})
+
+    def call_tool(self, name: str, arguments: dict) -> dict:
+        msg = self._post({
+            "jsonrpc": "2.0",
+            "id": self._new_id(),
+            "method": "tools/call",
+            "params": {"name": name, "arguments": arguments},
+        })
+        if "error" in msg:
+            raise RuntimeError(f"{SOURCE}: {name} failed: {msg['error']}")
+        result = msg["result"]
+        text = next((c.get("text", "") for c in result.get("content", []) if c.get("type") == "text"), "")
+        if result.get("isError"):
+            raise RuntimeError(f"{SOURCE}: {name} returned an error: {text[:200]}")
+        return json.loads(text)
+
+    def _new_id(self) -> int:
+        self._request_id += 1
+        return self._request_id
+
+    def _post(self, body: dict) -> dict:
+        wait = REQUEST_GAP_S - (time.monotonic() - self._last_request)
+        if wait > 0:
+            time.sleep(wait)
+        headers = {"Accept": "application/json, text/event-stream"}
+        if self._session_id:
+            headers["Mcp-Session-Id"] = self._session_id
+        r = self._client.post(MCP_URL, json=body, headers=headers)
+        self._last_request = time.monotonic()
+        r.raise_for_status()
+        self._session_id = r.headers.get("mcp-session-id", self._session_id)
+        if "id" not in body:
+            return {}  # a notification gets no response body
+        return _decode(r)
+
+
+def _decode(r: httpx.Response) -> dict:
+    """A JSON-RPC response arrives either as plain JSON or as an SSE stream."""
+    if "text/event-stream" in r.headers.get("content-type", ""):
+        data = [line[5:].strip() for line in r.text.splitlines() if line.startswith("data:")]
+        return json.loads(data[-1])
+    return r.json()
+
+
+def _parse_rows(rows: list[dict], fetched_at: str) -> list[RawListing]:
+    out: list[RawListing] = []
+    for row in rows:
+        source_id = str(row.get("id") or "")
+        slug = row.get("slug")
+        if not source_id or not slug or row.get("deal_type") != "sale":
+            continue
+
+        title = row.get("title") or "(untitled)"
+        ptype = row.get("property_type_name") or ""
+        # Whole-word check — "Land" must not count as present in "Portland".
+        if ptype and not re.search(rf"\b{re.escape(ptype)}\b", title, re.IGNORECASE):
             title = f"{ptype} — {title}"
 
-        price = prop.get("price")
-        currency = prop.get("currency") or "USD"
-        raw_price: str | None = None
-        if isinstance(price, (int, float)) and price:
-            sym = "US$" if str(currency).upper() == "USD" else (
-                "J$" if str(currency).upper() == "JMD" else f"{currency} "
-            )
-            raw_price = f"{sym} {int(price):,}"
+        description = row.get("summary") or None
+        lat, lon = row.get("map_lat"), row.get("map_lng")
+        # 'asset' coordinates belong to the property itself; anything else is a
+        # town or market centre, which normalize's own centroid lookup covers.
+        if row.get("map_source") == "asset" and isinstance(lat, (int, float)) and isinstance(lon, (int, float)):
+            tag = f"({lat},{lon})"
+            description = f"{description} {tag}" if description else tag
 
-        listed_on = (
-            prop.get("listed_at")
-            or prop.get("created")
-            or prop.get("created_at")
-            or prop.get("published_at")
-        )
-
-        location_text = (
-            prop.get("location")
-            or prop.get("city")
-            or prop.get("address")
-            or prop.get("region")
-        )
-        if not location_text and public_url:
-            m = re.search(r"/real-estate/([^/]+)/", public_url)
-            if m:
-                location_text = m.group(1).replace("-", " ").title()
-
-        lat = prop.get("latitude") or prop.get("lat")
-        lon = prop.get("longitude") or prop.get("lng") or prop.get("lon")
-        description = prop.get("description")
-        if isinstance(lat, (int, float)) and isinstance(lon, (int, float)):
-            tag_str = f"({lat},{lon})"
-            description = f"{description} {tag_str}".strip() if description else tag_str
-
-        # Photo from preview object (per agent inspection: small/medium/large keys)
-        preview = prop.get("preview") or {}
-        photo_path = (
-            preview.get("medium")
-            or preview.get("large")
-            or preview.get("small")
-            if isinstance(preview, dict)
-            else None
-        )
-        photo_url = None
-        if isinstance(photo_path, str) and photo_path:
-            if photo_path.startswith("http"):
-                photo_url = photo_path
-            else:
-                photo_url = BASE + ("" if photo_path.startswith("/") else "/") + photo_path
-
+        # created_at is when the aggregator ingested the listing (its catalogue
+        # was rebuilt in 2026-09), not the seller's listing date — so no
+        # listed_on_iso, or every listing would look freshly posted.
         out.append(
             RawListing(
                 source=SOURCE,
                 source_id=source_id,
-                url=url,
+                url=f"{BASE}/properties/{slug}",
                 title=title,
-                raw_price=raw_price,
-                raw_location=location_text if isinstance(location_text, str) else None,
-                description=description if isinstance(description, str) else None,
+                raw_price=_raw_price(row),
+                raw_location=row.get("zone_label") or None,
+                description=description,
                 fetched_at=fetched_at,
-                listed_on_iso=listed_on if isinstance(listed_on, str) else None,
-                photo_url=photo_url,
+                photo_url=_main_photo(row),
+                status=normalize_status(row.get("status")),
             )
         )
     return out
+
+
+def _raw_price(row: dict) -> str | None:
+    try:
+        amount = float(row.get("price") or 0)
+    except (TypeError, ValueError):
+        return None
+    currency = str(row.get("price_currency") or "").upper()
+    if amount <= 0 or not currency:
+        return None
+    return f"{currency} {amount:,.0f}"
+
+
+def _main_photo(row: dict) -> str | None:
+    images = [m for m in row.get("media") or [] if m.get("media_type") == "image" and m.get("file")]
+    if not images:
+        return None
+    main = next((m for m in images if m.get("is_main")), images[0])
+    path = main["file"]
+    return path if path.startswith("http") else MEDIA_BASE + path

@@ -5,7 +5,7 @@ import re
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from jinja2 import Template
+from jinja2 import Environment
 
 from .diff import DiffBuckets, regions_for
 from .regions import REGIONS, by_slug
@@ -27,7 +27,12 @@ PROPERTY_TYPE_ICONS = {
     "unknown": "❓",
 }
 
-PAGE_TEMPLATE = Template(
+# Everything rendered is scraped third-party text (titles, locations, URLs), so
+# escape by default: a listing title containing markup must not run as script
+# on the page that holds the viewer's saved statuses.
+_JINJA = Environment(autoescape=True)
+
+PAGE_TEMPLATE = _JINJA.from_string(
     """\
 <!doctype html>
 <html lang="en">
@@ -542,6 +547,21 @@ PAGE_TEMPLATE = Template(
     .region-header h2 { font-size: 1.15rem; }
     .status-btn { padding: 0.25rem 0.5rem; font-size: 0.95rem; }
   }
+
+  /* failing sources: their listings can't be shown, so say so up top rather
+     than only as a FAILED tag in the footer's per-source counts */
+  .outage {
+    margin: -0.75rem 0 1.25rem;
+    padding: 0.55rem 0.85rem;
+    border-left: 3px solid var(--warn);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+  .outage strong { color: var(--warn); }
+  .outage ul { margin: 0.2rem 0 0; padding-left: 1.1rem; }
+  .outage code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.8rem; }
 </style>
 </head>
 <body>
@@ -562,6 +582,17 @@ PAGE_TEMPLATE = Template(
   {{ total_dropped }} dropped off{% if total_unavailable %} &middot;
   {{ total_unavailable }} sold/under offer{% endif %}
 </p>
+
+{% if outages %}
+<div class="outage" role="status">
+  <strong>{{ outages|length }} source{{ '' if outages|length == 1 else 's' }} failing</strong> — listings only they carry aren't shown until they recover:
+  <ul>
+    {% for o in outages %}
+    <li><code>{{ o.source }}</code> since {{ o.since_label }}{% if o.days %} ({{ o.days }} day{{ '' if o.days == 1 else 's' }}){% endif %}{% if o.hidden %} &middot; {{ o.hidden }} listing{{ '' if o.hidden == 1 else 's' }} not shown{% endif %}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
 
 <div class="visit-banner" id="visit-banner" hidden role="status">
   <span class="visit-banner-text" id="visit-banner-text"></span>
@@ -1018,7 +1049,7 @@ PAGE_TEMPLATE = Template(
 )
 
 
-ARCHIVE_INDEX_TEMPLATE = Template(
+ARCHIVE_INDEX_TEMPLATE = _JINJA.from_string(
     """\
 <!doctype html>
 <html lang="en">
@@ -1127,6 +1158,14 @@ def _relative_time(iso: str | None, now: datetime | None = None) -> str:
     return f"{years} year{'s' if years > 1 else ''} ago"
 
 
+def _safe_url(url: object) -> str:
+    """The URL when it is http(s), else "". Autoescaping stops markup in a
+    scraped value but not a javascript: link or image source."""
+    if isinstance(url, str) and url.strip().lower().startswith(("http://", "https://")):
+        return url.strip()
+    return ""
+
+
 def _row_to_view(
     row: dict,
     price_drops: dict[str, tuple[int, int]] | None = None,
@@ -1134,8 +1173,9 @@ def _row_to_view(
     out = dict(row)
     sources = json.loads(row.get("sources_json") or "[]")
     urls = json.loads(row.get("urls_json") or "[]")
-    paired = list(zip(sources, urls))
+    paired = [(src, _safe_url(url)) for src, url in zip(sources, urls)]
     paired.sort(key=lambda sv: SOURCE_RANK.get(sv[0], 99))
+    out["photo_url"] = _safe_url(row.get("photo_url"))
     if paired:
         out["primary_source"] = paired[0][0]
         out["primary_url"] = paired[0][1]
@@ -1215,8 +1255,9 @@ def build_digest(
     notes: str = "",
     sources_counts: dict[str, int] | None = None,
     price_drops: dict[str, tuple[int, int]] | None = None,
+    outages: list[dict] | None = None,
 ) -> tuple[str, str]:
-    """Returns (page_title, html)."""
+    """Returns (page_title, html). outages is store.source_outages() output."""
     by_region: dict[str, dict] = {}
     for r in REGIONS:
         by_region[r.slug] = _empty_region_buckets(r.slug, r.name, r)
@@ -1262,11 +1303,14 @@ def build_digest(
     active_regions = [v for v in region_views if v["has_anything"]]
     quiet_regions = [v for v in region_views if not v["has_anything"]]
 
-    total_new = sum(v["new_count"] for v in region_views)
-    total_active = sum(v["active_count"] for v in region_views)
-    total_stale = sum(v["stale_count"] for v in region_views)
-    total_dropped = sum(v["dropped_count"] for v in region_views)
-    total_unavailable = sum(v["unavailable_count"] for v in region_views)
+    # Headline totals count unique listings. Summing the per-region counts
+    # double-counts: the 7-mile radii overlap (Runaway Bay / Discovery Bay /
+    # Mammee Bay), so one listing is rendered under several regions.
+    total_new = len(buckets.new_since_last_run)
+    total_active = len(buckets.still_active)
+    total_stale = len(buckets.stale)
+    total_dropped = len(buckets.dropped_off)
+    total_unavailable = len(buckets.unavailable)
     total_drops = len(price_drops or {})
 
     date_label = date.today().isoformat()
@@ -1295,6 +1339,14 @@ def build_digest(
         sources_counts=sources_counts or {},
         notes=notes,
         run_iso=run_iso,
+        outages=[
+            dict(
+                o,
+                since_label=o["since_iso"][:10],
+                days=(date.fromisoformat(run_iso[:10]) - date.fromisoformat(o["since_iso"][:10])).days,
+            )
+            for o in outages or []
+        ],
     )
     return subject, html
 

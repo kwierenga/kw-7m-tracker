@@ -53,14 +53,15 @@ GitHub Actions cron (daily 13:00 UTC = 8 AM Jamaica)
 | Source | Status | Notes |
 |---|---|---|
 | realtor.com international Jamaica | ✅ active | ~25 cards/page, server-rendered |
-| caribbeanrealestatemls.com | ✅ active | Next.js, listings in `__NEXT_DATA__` JSON |
+| caribbeanrealestatemls.com | ✅ active | Public read-only MCP catalogue (the site's `llms.txt` asks agents to use it rather than scrape) — exact price, coordinates, status; ~17 paced calls |
 | cbjamaica.com (Coldwell Banker JA) | ✅ active | Featured + recent properties |
 | millennium properties | ✅ active | `/property-search?page=N` paginated |
-| golden gates realty JA | ✅ active | Same template as Millennium |
-| century21jm.com | ✅ active | Long IDX search URL with `/page/N/limit/12/range/H` pagination |
+| golden gates realty JA | ⛔ blocked | Same template as Millennium. Its AWS load balancer 403s every client — GitHub Actions, a home connection, even a real headless browser — since 2026-07-14. Still tried daily; the digest shows an outage notice while it fails |
+| century21jm.com | ⛔ blocked | Long IDX search URL with `/page/N/limit/12/range/H` pagination. Same block as golden gates since 2026-07-14 |
 | xposure InteractiveLink | ✅ active | Manual ingest from `data/xposure_urls.txt` |
 | getkeez.com | ✅ active | Public JSON API at `/api/properties` — exact lat/lon, walked per parish (AN/TR/PO/WE) |
-| Sagicor Properties (sagicorproperties.com) | ⚠️ flaky | Same template as Golden Gates; AWS WAF intermittently challenges from busy IPs — handled gracefully via `sources_active` |
+| remax-elite.com.jm | ⚠️ check | `/property-search` pagination; ~500 cards a day but no listing inside a tracked region since 2026-07-01 — needs a look |
+| Sagicor Properties (sagicorproperties.com) | ⛔ blocked | Same template as Golden Gates; same block since 2026-07-14 |
 | Sotheby's Jamaica | ❌ dropped | AWS WAF JS challenge — needs Playwright |
 | properstar.com/jamaica | ❌ dropped | Cloudflare-tier anti-bot; not worth it |
 | RE/MAX Jamaica | ❌ dropped | The .com domain is recruitment brochure, not listings |
@@ -166,6 +167,14 @@ When dedup merges listings from multiple sources, the digest shows the **most re
 ### Per-source counts in every digest
 
 The footer of every digest lists how many cards each scraper returned this run, with failed sources marked `FAILED` in red. Day-over-day comparisons in `data/last_run_status.json` (and the `run_log` table inside `listings.db`) make scraper rot visible quickly.
+
+A scraper that returns **zero** listings is recorded as `FAILED` too (except `xposure`, which is manual ingest — see `MAY_RETURN_EMPTY` in [`src/scrapers/__init__.py`](src/scrapers/__init__.py)). An empty result from a real listings site means a layout change or a block; a silent 0 would hide it and let the source count as active for drop detection.
+
+A failed source's listings can't be shown (they weren't re-confirmed this run), so every failing source also gets a notice under the summary: when its current failure streak began and how many listings it's hiding (`store.source_outages`).
+
+### Price changes compare the seller's asking price
+
+Price drops, and the "recent price change keeps an old listing active" rule, compare the source's own asking amount rather than our USD conversion, and ignore moves under 2% (`MIN_PRICE_CHANGE_PCT` in [`src/store.py`](src/store.py)). Comparing converted USD turned daily exchange-rate movement into 100+ phantom drops. The daily FX fetch also holds back any single-day jump over 5% until the next day's fetch confirms it ([`src/fx.py`](src/fx.py)).
 
 ### Mapbox token gotcha for fixtures
 

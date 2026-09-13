@@ -3,8 +3,11 @@
 $1.3M listing showed as ~$8K) — locking in the fix with explicit cases."""
 from __future__ import annotations
 
+import json
+import tempfile
 import unittest
-from unittest.mock import patch
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 from src import fx
 
@@ -134,6 +137,60 @@ class GetFxRatesCacheTests(unittest.TestCase):
         cache = {"_last_known": {"JMD": 160.0, "GBP": 0.80, "CAD": 1.38, "EUR": 0.93}}
         rates = fx._fallback_rates(cache)
         self.assertEqual(rates, {"JMD": 160.0, "GBP": 0.80, "CAD": 1.38, "EUR": 0.93})
+
+
+class ParseAmountTests(unittest.TestCase):
+    def test_returns_source_amount_without_converting(self) -> None:
+        with patch("src.fx.get_fx_rates") as rates:
+            self.assertEqual(fx.parse_amount("JMD $ 50,000,000"), (50_000_000.0, "JMD"))
+            self.assertEqual(fx.parse_amount("US$450K"), (450_000.0, "USD"))
+            self.assertEqual(fx.parse_amount("USD\n    $750,000"), (750_000.0, "USD"))
+            rates.assert_not_called()
+
+    def test_unparseable(self) -> None:
+        self.assertEqual(fx.parse_amount("Price on request"), (None, "unknown"))
+
+
+class ScreenRatesTests(unittest.TestCase):
+    """open.er-api returned JMD 147.76 against ~158 on 2026-08-22; a one-day
+    glitch like that must not reprice every JMD listing."""
+
+    LAST = {"JMD": 158.0, "GBP": 0.74, "CAD": 1.38, "EUR": 0.86}
+
+    def test_normal_daily_move_passes_through(self) -> None:
+        cache = {"_last_known": dict(self.LAST)}
+        candidate = dict(self.LAST, JMD=158.9)
+        self.assertEqual(fx._screen_rates(candidate, cache), candidate)
+        self.assertEqual(cache["_fx_suspect"], {})
+
+    def test_outlier_is_held_at_last_known(self) -> None:
+        cache = {"_last_known": dict(self.LAST)}
+        rates = fx._screen_rates(dict(self.LAST, JMD=147.76), cache)
+        self.assertEqual(rates["JMD"], 158.0)
+        self.assertEqual(cache["_fx_suspect"], {"JMD": 147.76})
+
+    def test_move_confirmed_by_next_fetch_is_accepted(self) -> None:
+        cache = {"_last_known": dict(self.LAST), "_fx_suspect": {"JMD": 147.76}}
+        rates = fx._screen_rates(dict(self.LAST, JMD=147.5), cache)
+        self.assertEqual(rates["JMD"], 147.5)
+        self.assertEqual(cache["_fx_suspect"], {})
+
+    def test_without_last_known_candidate_is_accepted(self) -> None:
+        candidate = dict(self.LAST, JMD=100.0)
+        self.assertEqual(fx._screen_rates(candidate, {}), candidate)
+
+    def test_get_fx_rates_persists_held_rate_and_suspect(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "fx_cache.json"
+            path.write_text(json.dumps({"_last_known": self.LAST}))
+            client = MagicMock()
+            client.get.return_value.json.return_value = {"rates": dict(self.LAST, JMD=147.76)}
+            with patch.object(fx, "CACHE", path):
+                rates = fx.get_fx_rates(client)
+            saved = json.loads(path.read_text())
+        self.assertEqual(rates["JMD"], 158.0)
+        self.assertEqual(saved["_last_known"]["JMD"], 158.0)
+        self.assertEqual(saved["_fx_suspect"], {"JMD": 147.76})
 
 
 if __name__ == "__main__":

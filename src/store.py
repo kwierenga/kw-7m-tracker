@@ -7,6 +7,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterable, Iterator
 
+from .fx import parse_amount
+
 DB_PATH = Path(__file__).resolve().parent.parent / "data" / "listings.db"
 
 SCHEMA = """
@@ -217,32 +219,70 @@ def _record_price_history(
     )
 
 
+# Smallest move in a listing's asking price that counts as a real change.
+# Comparing the source's own amount removes OUR daily JMD→USD conversion, but
+# some sources quote an already-converted price (realtor.com shows USD derived
+# from a JMD ask; xposure the reverse) that drifts up to ~2% as THEIR rate
+# moves. Before this, conversion noise produced 100+ phantom 'price drops' on
+# most days and rescued old JMD listings from 'stale'.
+MIN_PRICE_CHANGE_PCT = 2.0
+
+
+def _price_observations(
+    con: sqlite3.Connection, run_iso: str | None = None
+) -> dict[str, list[sqlite3.Row]]:
+    """{canonical_id: price_history rows in run order}. With run_iso, only
+    listings that have an observation in that run."""
+    sql = (
+        "SELECT canonical_id, run_iso, price_usd, price_original, price_currency "
+        "FROM price_history WHERE price_usd IS NOT NULL"
+    )
+    params: tuple = ()
+    if run_iso is not None:
+        sql += " AND canonical_id IN (SELECT canonical_id FROM price_history WHERE run_iso = ?)"
+        params = (run_iso,)
+    out: dict[str, list[sqlite3.Row]] = {}
+    for r in con.execute(sql + " ORDER BY canonical_id, run_iso", params):
+        out.setdefault(r["canonical_id"], []).append(r)
+    return out
+
+
+def _comparable_prices(prev: sqlite3.Row, cur: sqlite3.Row) -> tuple[float, float]:
+    """The two numbers to compare between consecutive observations: the
+    source's own asking amounts when both parse in the same currency, else
+    the stored USD prices (e.g. a merged listing whose quoted currency changed)."""
+    a, a_cur = parse_amount(prev["price_original"] or "")
+    b, b_cur = parse_amount(cur["price_original"] or "")
+    if a and b and a_cur == b_cur and a_cur != "unknown":
+        return a, b
+    return float(prev["price_usd"]), float(cur["price_usd"])
+
+
+def _pct_change(prev: sqlite3.Row, cur: sqlite3.Row) -> float:
+    a, b = _comparable_prices(prev, cur)
+    return 100.0 * (b - a) / a if a else 0.0
+
+
 def find_price_drops(
     con: sqlite3.Connection, run_iso: str
 ) -> dict[str, tuple[int, int]]:
     """Returns {canonical_id: (old_price_usd, new_price_usd)} for listings
-    whose price decreased between the previous observation and this run.
-    Only listings observed this run are considered; first-sightings (no
-    prior history) and price increases are excluded."""
-    rows = con.execute(
-        """
-        WITH last_two AS (
-          SELECT canonical_id, run_iso, price_usd,
-                 row_number() OVER (PARTITION BY canonical_id ORDER BY run_iso DESC) AS rn
-          FROM price_history
-          WHERE price_usd IS NOT NULL
-        )
-        SELECT a.canonical_id, b.price_usd AS old_p, a.price_usd AS new_p
-        FROM last_two a
-        JOIN last_two b
-          ON b.canonical_id = a.canonical_id
-         AND a.rn = 1 AND b.rn = 2
-        WHERE a.run_iso = ?
-          AND a.price_usd < b.price_usd
-        """,
-        (run_iso,),
-    ).fetchall()
-    return {r["canonical_id"]: (r["old_p"], r["new_p"]) for r in rows}
+    whose asking price fell by at least MIN_PRICE_CHANGE_PCT between the
+    previous observation and this run. Only listings observed this run are
+    considered; first-sightings (no prior history) and increases are excluded.
+
+    old_price_usd is re-expressed at this run's conversion (new USD scaled by
+    the asking-price ratio), so the 'was' label shows only the seller's cut."""
+    drops: dict[str, tuple[int, int]] = {}
+    for cid, obs in _price_observations(con, run_iso).items():
+        if len(obs) < 2 or obs[-1]["run_iso"] != run_iso:
+            continue
+        a, b = _comparable_prices(obs[-2], obs[-1])
+        if not a or not b or 100.0 * (b - a) / a > -MIN_PRICE_CHANGE_PCT:
+            continue
+        new_usd = int(obs[-1]["price_usd"])
+        drops[cid] = (int(round(new_usd * a / b)), new_usd)
+    return drops
 
 
 def tracker_epoch_iso(con: sqlite3.Connection) -> str | None:
@@ -256,29 +296,19 @@ def tracker_epoch_iso(con: sqlite3.Connection) -> str | None:
 
 def last_price_change_iso(con: sqlite3.Connection) -> dict[str, str]:
     """Returns {canonical_id: run_iso} of the most recent run at which a
-    listing's price *changed* from its previous observation (up or down).
+    listing's asking price moved by at least MIN_PRICE_CHANGE_PCT from its
+    previous observation (up or down).
 
     A recent price move is strong evidence a listing is still actively for
     sale — sellers adjust price to move unsold stock, while sold listings go
     static. diff.classify uses this to rescue an otherwise-stale (old) listing
     back into 'active'. Listings whose price has never changed are absent."""
-    rows = con.execute(
-        """
-        WITH seq AS (
-          SELECT canonical_id, run_iso, price_usd,
-                 LAG(price_usd) OVER (
-                   PARTITION BY canonical_id ORDER BY run_iso
-                 ) AS prev_p
-          FROM price_history
-          WHERE price_usd IS NOT NULL
-        )
-        SELECT canonical_id, MAX(run_iso) AS last_change
-        FROM seq
-        WHERE prev_p IS NOT NULL AND price_usd <> prev_p
-        GROUP BY canonical_id
-        """
-    ).fetchall()
-    return {r["canonical_id"]: r["last_change"] for r in rows}
+    changed: dict[str, str] = {}
+    for cid, obs in _price_observations(con).items():
+        for prev, cur in zip(obs, obs[1:]):
+            if abs(_pct_change(prev, cur)) >= MIN_PRICE_CHANGE_PCT:
+                changed[cid] = cur["run_iso"]
+    return changed
 
 
 def upsert_listings(con: sqlite3.Connection, listings: Iterable[dict], run_iso: str) -> tuple[int, int]:
@@ -478,3 +508,47 @@ def write_run_log(
             json.dumps(sources_counts or {}),
         ),
     )
+
+
+def source_outages(con: sqlite3.Connection, run_iso: str) -> list[dict]:
+    """Sources that failed in run_iso: when the current failure streak began
+    and how many of their listings the digest can't show because of it.
+
+    A failed source's listings drop out of listings_seen_in_run, so without
+    this they silently vanish from the page. `hidden` counts listings last
+    seen at or after the source's final good run (older disappearances aren't
+    the outage's doing) and not re-confirmed by another source this run.
+    Runs from before failures were logged as -1 recorded a blocked source as
+    0, so any count <= 0 extends the streak."""
+    runs = [
+        (r["run_iso"], json.loads(r["sources_json"] or "{}"))
+        for r in con.execute(
+            "SELECT run_iso, sources_json FROM run_log WHERE run_iso <= ? ORDER BY run_iso DESC",
+            (run_iso,),
+        )
+    ]
+    if not runs or runs[0][0] != run_iso:
+        return []
+    outages: list[dict] = []
+    for source, count in runs[0][1].items():
+        if count >= 0:
+            continue
+        since, last_good = run_iso, None
+        for earlier_iso, counts in runs[1:]:
+            earlier = counts.get(source)
+            if earlier is None:
+                break  # no per-source counts that far back, or source not yet added
+            if earlier > 0:
+                last_good = earlier_iso
+                break
+            since = earlier_iso
+        hidden = 0
+        if last_good is not None:
+            for r in con.execute(
+                "SELECT sources_json FROM listings WHERE last_seen_iso >= ? AND last_seen_iso < ?",
+                (last_good, run_iso),
+            ):
+                hidden += source in json.loads(r["sources_json"] or "[]")
+        outages.append({"source": source, "since_iso": since, "hidden": hidden})
+    outages.sort(key=lambda o: (-o["hidden"], o["source"]))
+    return outages

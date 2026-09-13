@@ -24,6 +24,12 @@ ALL_SCRAPERS = [
     ("xposure", scrape_xposure_manual),
 ]
 
+# Sources allowed to come back with nothing. Every other scraper returning an
+# empty list is recorded as FAILED by main.run_scrapers — an empty result from
+# a real listings site means a layout change or a block, never "no listings".
+# xposure is manual ingest: empty just means data/xposure_urls.txt is empty.
+MAY_RETURN_EMPTY = frozenset({"xposure"})
+
 # Sources whose scrape captures the COMPLETE active set every run, so a listing
 # vanishing from the feed (while its URL still resolves) is a trustworthy
 # "removed from sale / likely sold" signal rather than scrape-window noise.

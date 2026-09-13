@@ -23,6 +23,7 @@ from .store import (
     lookup_canonical_id,
     mint_canonical_id,
     reassign_aliases,
+    source_outages,
     tracker_epoch_iso,
     upsert_listings,
     write_run_log,
@@ -34,20 +35,25 @@ def previous_run_iso(con) -> str | None:
     return row["r"] if row else None
 
 
-def run(dry_run: bool) -> int:
-    run_iso = datetime.now(timezone.utc).isoformat()
-    notes_lines: list[str] = []
+def run_scrapers(all_scrapers=None) -> tuple[list, list[str], dict[str, int], list[str]]:
+    """Runs every scraper → (raws, sources_active, sources_counts, notes_lines).
 
-    print(f"[run] starting run_iso={run_iso} dry_run={dry_run}")
-    fx = get_jmd_per_usd()
-    print(f"[fx] 1 USD = {fx:.2f} JMD")
-
+    A scraper that raises — or returns nothing without being listed in
+    scrapers.MAY_RETURN_EMPTY — is recorded as failed (-1) and kept out of
+    sources_active. A silent 0 hides a site redesign (caribbean_mls returned
+    0 for weeks after its 2026-09 rebuild) and lets the source count as
+    'active', which can phantom-drop its listings."""
+    if all_scrapers is None:
+        all_scrapers = scrapers.ALL_SCRAPERS
     raws = []
     sources_active: list[str] = []
     sources_counts: dict[str, int] = {}
-    for name, fn in scrapers.ALL_SCRAPERS:
+    notes_lines: list[str] = []
+    for name, fn in all_scrapers:
         try:
             got = fn()
+            if not got and name not in scrapers.MAY_RETURN_EMPTY:
+                raise RuntimeError(f"{name}: parsed 0 listings (layout change or blocked response?)")
             print(f"[scrape] {name}: {len(got)} raw")
             raws.extend(got)
             sources_active.append(name)
@@ -56,6 +62,17 @@ def run(dry_run: bool) -> int:
             print(f"[scrape] {name}: FAILED {type(e).__name__}: {e}")
             notes_lines.append(f"{name} failed: {type(e).__name__}: {e}")
             sources_counts[name] = -1  # sentinel: source did not run cleanly this cycle
+    return raws, sources_active, sources_counts, notes_lines
+
+
+def run(dry_run: bool) -> int:
+    run_iso = datetime.now(timezone.utc).isoformat()
+
+    print(f"[run] starting run_iso={run_iso} dry_run={dry_run}")
+    fx = get_jmd_per_usd()
+    print(f"[fx] 1 USD = {fx:.2f} JMD")
+
+    raws, sources_active, sources_counts, notes_lines = run_scrapers()
 
     norms = normalize_all(raws)
     print(f"[normalize] {len(norms)} normalized")
@@ -170,6 +187,8 @@ def run(dry_run: bool) -> int:
             "; ".join(notes_lines),
             sources_counts=sources_counts,
         )
+        # After write_run_log, so this run counts toward each failure streak.
+        outages = source_outages(con, run_iso)
 
     subject, html = build_digest(
         buckets,
@@ -179,6 +198,7 @@ def run(dry_run: bool) -> int:
         notes="; ".join(notes_lines),
         sources_counts=sources_counts,
         price_drops=price_drops,
+        outages=outages,
     )
     print(f"[digest] {subject}")
 
@@ -198,8 +218,9 @@ def run(dry_run: bool) -> int:
     new_by_region = _per_region(buckets.new_since_last_run)
     dropped_by_region = _per_region(buckets.dropped_off)
 
-    def _segment(per_region: dict[str, int], label: str) -> str | None:
-        total = sum(per_region.values())
+    def _segment(per_region: dict[str, int], total: int, label: str) -> str | None:
+        # total is the unique listing count; per_region can sum higher because
+        # a listing inside overlapping regions is counted under each of them.
         if total == 0:
             return None
         if len(per_region) == 1:
@@ -217,9 +238,9 @@ def run(dry_run: bool) -> int:
     )
     segments = [
         s for s in (
-            _segment(new_by_region, "new"),
+            _segment(new_by_region, len(buckets.new_since_last_run), "new"),
             drops_segment,
-            _segment(dropped_by_region, "dropped"),
+            _segment(dropped_by_region, len(buckets.dropped_off), "dropped"),
         )
         if s
     ]

@@ -10,6 +10,7 @@ thresholds here are intentionally low.
 """
 from __future__ import annotations
 
+import json
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
@@ -60,10 +61,12 @@ class ParserSmokeTests(unittest.TestCase):
         self._check_minimum(listings, 5, "cb_jamaica")
 
     def test_caribbean_mls(self) -> None:
-        listings = caribbean_mls._parse(_load("caribbean_mls.html"))
+        # Rows captured from the site's MCP catalogue search (2026-09).
+        rows = json.loads(_load("caribbean_mls.json"))
+        listings = caribbean_mls._parse_rows(rows, datetime.now(timezone.utc).isoformat())
         self._check_minimum(listings, 5, "caribbean_mls")
-        # Sanity: at least one listing should have a parseable price string
-        self.assertTrue(any(L.raw_price for L in listings))
+        self.assertTrue(all(L.raw_price for L in listings))
+        self.assertTrue(any(L.photo_url for L in listings))
 
     def test_millennium(self) -> None:
         listings = millennium._parse(_load("millennium.html"))

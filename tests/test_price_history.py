@@ -128,6 +128,50 @@ class PriceHistoryTests(unittest.TestCase):
         )
 
 
+class PriceNoiseTests(unittest.TestCase):
+    """Currency conversion must not register as the seller changing the price.
+    Comparing converted USD produced 100+ phantom drops most days and kept old
+    JMD listings out of 'stale' via the price-change rescue."""
+
+    T1, T2, T3 = "2026-09-10T13:00:00Z", "2026-09-11T13:00:00Z", "2026-09-12T13:00:00Z"
+
+    @staticmethod
+    def _quoted(canonical: str, original: str, currency: str, usd: int) -> dict:
+        return _row(canonical, usd) | {"price_original": original, "price_currency": currency}
+
+    def test_fx_move_with_unchanged_jmd_ask_is_neither_drop_nor_change(self):
+        con = _connect()
+        upsert_listings(con, [self._quoted("A", "JMD $50,000,000", "JMD", 316_456)], self.T1)
+        upsert_listings(con, [self._quoted("A", "JMD $50,000,000", "JMD", 315_990)], self.T2)
+        self.assertEqual(find_price_drops(con, self.T2), {})
+        self.assertEqual(last_price_change_iso(con), {})
+
+    def test_jmd_ask_cut_is_a_drop_labelled_at_current_conversion(self):
+        # JMD 50M -> 45M. The 'was' USD is the new USD scaled by 50/45, so the
+        # label reflects the seller's 10% cut, not the day's FX move as well.
+        con = _connect()
+        upsert_listings(con, [self._quoted("A", "JMD $50,000,000", "JMD", 316_456)], self.T1)
+        upsert_listings(con, [self._quoted("A", "JMD $45,000,000", "JMD", 284_000)], self.T2)
+        self.assertEqual(find_price_drops(con, self.T2), {"A": (315_556, 284_000)})
+        self.assertEqual(last_price_change_iso(con), {"A": self.T2})
+
+    def test_converted_quote_drift_below_threshold_is_ignored(self):
+        # realtor.com quotes USD converted from a JMD ask; it drifts ~0.2-1.5%.
+        con = _connect()
+        upsert_listings(con, [self._quoted("A", "USD $189,611", "USD", 189_611)], self.T1)
+        upsert_listings(con, [self._quoted("A", "USD $188,970", "USD", 188_970)], self.T2)
+        upsert_listings(con, [self._quoted("A", "USD $186,700", "USD", 186_700)], self.T3)
+        self.assertEqual(find_price_drops(con, self.T2), {})
+        self.assertEqual(find_price_drops(con, self.T3), {})
+        self.assertEqual(last_price_change_iso(con), {})
+
+    def test_quoted_currency_switch_falls_back_to_usd(self):
+        con = _connect()
+        upsert_listings(con, [self._quoted("A", "USD $500,000", "USD", 500_000)], self.T1)
+        upsert_listings(con, [self._quoted("A", "JMD $70,000,000", "JMD", 443_038)], self.T2)
+        self.assertEqual(find_price_drops(con, self.T2), {"A": (500_000, 443_038)})
+
+
 class TrackerEpochTests(unittest.TestCase):
     def test_none_when_empty(self):
         self.assertIsNone(tracker_epoch_iso(_connect()))
