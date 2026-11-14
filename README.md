@@ -21,6 +21,7 @@ Configured in [`src/regions.py`](src/regions.py):
   - Port Antonio (Portland)
   - Negril
   - Moneague
+  - Treasure Beach (St Elizabeth)
 - **Radius:** 7 miles per region
 - **Budget:** homes ≤ $800K USD, land ≤ $350K USD (per region)
 - **Boost keywords** per region — see `boost_keywords` in `REGIONS`
@@ -59,7 +60,7 @@ GitHub Actions cron (daily 13:00 UTC = 8 AM Jamaica)
 | golden gates realty JA | ⛔ blocked | Same template as Millennium. Its AWS load balancer 403s every client — GitHub Actions, a home connection, even a real headless browser — since 2026-07-14. Still tried daily; the digest shows an outage notice while it fails |
 | century21jm.com | ⛔ blocked | Long IDX search URL with `/page/N/limit/12/range/H` pagination. Same block as golden gates since 2026-07-14 |
 | xposure InteractiveLink | ✅ active | Manual ingest from `data/xposure_urls.txt` |
-| getkeez.com | ✅ active | Public JSON API at `/api/properties` — exact lat/lon, walked per parish (AN/TR/PO/WE) |
+| getkeez.com | ✅ active | Public JSON API at `/api/properties` — exact lat/lon, walked per parish (AN/TR/PO/WE/EL) |
 | remax-elite.com.jm | ⚠️ check | `/property-search` pagination; ~500 cards a day but no listing inside a tracked region since 2026-07-01 — needs a look |
 | Sagicor Properties (sagicorproperties.com) | ⛔ blocked | Same template as Golden Gates; same block since 2026-07-14 |
 | Sotheby's Jamaica | ❌ dropped | AWS WAF JS challenge — needs Playwright |
@@ -93,7 +94,7 @@ The GitHub Actions workflow does the same thing every day at 13:00 UTC and commi
 
 ```
 src/
-  regions.py        Multi-region config (Upton + 5 north-coast spots)
+  regions.py        Multi-region config (Upton + 8 other spots)
   models.py         RawListing + NormalizedListing
   dates.py          Jamaica dd/mm/yyyy-aware date parser
   geo.py            Haversine + parish/town centroids

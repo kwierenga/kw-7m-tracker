@@ -45,6 +45,10 @@ TOWN_CENTROIDS: dict[str, tuple[float, float]] = {
     "fern gully": (18.3739, -77.1019),
     "tower isle": (18.4097, -76.9547),
     "boscobel": (18.4083, -76.9667),
+    "treasure beach": (17.8833, -77.7667),
+    # ~11 miles west of Treasure Beach: resolving it here keeps Black River
+    # listings out of the region instead of falling back to the parish centroid.
+    "black river": (18.0264, -77.8489),
 }
 
 

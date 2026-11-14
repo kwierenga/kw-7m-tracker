@@ -107,6 +107,21 @@ REGIONS: tuple[Region, ...] = (
             "golden grove", "epworth",
         ),
     ),
+    Region(
+        slug="treasure_beach",
+        name="Treasure Beach (St Elizabeth)",
+        lat=17.8833,
+        lon=-77.7667,
+        radius_miles=7.0,
+        home_budget_usd=800_000,
+        land_budget_usd=350_000,
+        boost_keywords=(
+            "treasure beach", "calabash bay", "great bay", "billy's bay",
+            "billys bay", "frenchman's bay", "frenchmans bay", "pedro plains",
+            "pedro cross", "southfield", "lover's leap", "lovers leap",
+            "sandy bank", "flagaman", "watchwell",
+        ),
+    ),
 )
 
 

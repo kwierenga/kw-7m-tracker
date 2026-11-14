@@ -5,8 +5,8 @@ GET /api/properties?rent_sale=sale&state=<code>&per_page=100. Each page is
 a JSON envelope { current_page, last_page, data: [...] } with structured
 records — lat/lon, photos, description, dates — so no soup parsing.
 
-We only walk the four parishes that overlap our regions (St. Ann, Trelawny,
-Portland, Westmoreland) — the full set is ~3,900 sale listings island-wide,
+We only walk the five parishes that overlap our regions (St. Ann, Trelawny,
+Portland, Westmoreland, St. Elizabeth) — the full set is ~3,900 sale listings island-wide,
 but most are in Kingston/St. Catherine which we never match.
 """
 from __future__ import annotations
@@ -26,7 +26,7 @@ BASE = "https://www.getkeez.com"
 # State codes for the parishes our regions live in. Discovered by walking a
 # few API pages and bucketing address.state values; see geo.PARISH_CENTROIDS
 # for the matching English parish names.
-RELEVANT_STATES: tuple[str, ...] = ("AN", "TR", "PO", "WE")
+RELEVANT_STATES: tuple[str, ...] = ("AN", "TR", "PO", "WE", "EL")
 PER_PAGE = 100
 MAX_PAGES_PER_STATE = 20  # 20*100 caps each parish at 2000 listings — far above current totals
 

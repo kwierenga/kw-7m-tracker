@@ -2,9 +2,9 @@
 
 Same template family as Golden Gates / Millennium (.property_listing_items
 cards), so card parsing is straightforward. We narrow the search by the
-?parish=<name> filter and walk only the four parishes our regions live in
+?parish=<name> filter and walk only the five parishes our regions live in
 — island-wide there are ~7,000 sale listings, but only ~1,500 across St
-Ann / Trelawny / Portland / Westmoreland.
+Ann / Trelawny / Portland / Westmoreland / St Elizabeth.
 
 The README's old guess of `sagicorpropertiesja.com` doesn't exist; the
 working domain is `sagicorproperties.com`. The AWS WAF block listed in
@@ -27,9 +27,9 @@ from ._throttle import Throttle, polite_get
 SOURCE = "sagicor_props"
 BASE = "https://www.sagicorproperties.com"
 
-# Parish names as the site's filter expects them. Restricted to the four
+# Parish names as the site's filter expects them. Restricted to the five
 # parishes our regions overlap.
-RELEVANT_PARISHES: tuple[str, ...] = ("St. Ann", "Trelawny", "Portland", "Westmoreland")
+RELEVANT_PARISHES: tuple[str, ...] = ("St. Ann", "Trelawny", "Portland", "Westmoreland", "St. Elizabeth")
 PER_PAGE = 100
 MAX_PAGES_PER_PARISH = 15  # 15*100 = 1500 per parish — well above current totals
 
