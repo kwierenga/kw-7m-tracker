@@ -54,7 +54,7 @@ GitHub Actions cron (daily 13:00 UTC = 8 AM Jamaica)
 | Source | Status | Notes |
 |---|---|---|
 | realtor.com international Jamaica | ✅ active | ~25 cards/page, server-rendered |
-| caribbeanrealestatemls.com | ⚠️ needs key | Read-only MCP catalogue (the site's `llms.txt` asks agents to use it rather than scrape) — exact price, coordinates, status; ~17 paced calls. Since 2026-10-21 it returns 401 without an account: create a free account on the site and store its API key as the `CARIBBEAN_MLS_ACCESS_KEY` repository secret |
+| caribbeanrealestatemls.com | ⏸ disabled | Read-only MCP catalogue (the site's `llms.txt` asks agents to use it rather than scrape) — exact price, coordinates, status. Since 2026-10-21 it returns 401 without an account key; sign-up code emails never arrived, so it was taken out of `ALL_SCRAPERS` on 2026-11-14. To re-enable: store the key as the `CARIBBEAN_MLS_ACCESS_KEY` secret, re-add it to `ALL_SCRAPERS`, and give it a `BACKFILL_SOURCES` window |
 | cbjamaica.com (Coldwell Banker JA) | ✅ active | Featured + recent properties |
 | millennium properties | ✅ active | `/property-search?page=N` paginated |
 | golden gates realty JA | ⛔ blocked | Same template as Millennium. Its AWS WAF 403s hosting-provider IPs (GitHub Actions) since 2026-07-14; a home IP with `curl_cffi` got through on 2026-11-13, a plain Python client did not. Pure `MLS-` mirror, so remax_elite now carries its inventory. Still tried daily; the digest shows an outage notice while it fails |

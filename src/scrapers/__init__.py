@@ -14,7 +14,12 @@ from .xposure_manual import scrape as scrape_xposure_manual
 ALL_SCRAPERS = [
     ("realtor_com_intl", scrape_realtor_com_intl),
     ("cb_jamaica", scrape_cb_jamaica),
-    ("caribbean_mls", scrape_caribbean_mls),
+    # caribbean_mls disabled 2026-11-14: its catalogue has needed an account
+    # API key since 2026-10-21 and the sign-up code emails never arrived. The
+    # scraper and the CARIBBEAN_MLS_ACCESS_KEY plumbing are intact — to bring
+    # it back, set the secret, re-add the line below, and give it a
+    # BACKFILL_SOURCES window so its inventory doesn't land in 'new'.
+    # ("caribbean_mls", scrape_caribbean_mls),
     ("millennium", scrape_millennium),
     ("golden_gates", scrape_golden_gates),
     ("century21_jm", scrape_century21_jm),
