@@ -311,9 +311,21 @@ def last_price_change_iso(con: sqlite3.Connection) -> dict[str, str]:
     return changed
 
 
-def upsert_listings(con: sqlite3.Connection, listings: Iterable[dict], run_iso: str) -> tuple[int, int]:
+def upsert_listings(
+    con: sqlite3.Connection,
+    listings: Iterable[dict],
+    run_iso: str,
+    backdate_sources: frozenset[str] | set[str] = frozenset(),
+    epoch_iso: str | None = None,
+) -> tuple[int, int]:
     """Returns (n_new, n_updated). Each listing must have a canonical_id assigned.
-    Side effect: writes a price_history row per listing-with-price-this-run."""
+    Side effect: writes a price_history row per listing-with-price-this-run.
+
+    backdate_sources: sources whose whole inventory is arriving for the first
+    time (a new or newly-fixed scraper). A row seen only through them gets
+    first_seen_iso = epoch_iso instead of run_iso, so hundreds of listings
+    that were on the market all along don't spend a week in 'new' and are
+    treated like the launch cohort (true age unknown) by diff.classify."""
     n_new = n_updated = 0
     cur = con.cursor()
     for L in listings:
@@ -326,6 +338,14 @@ def upsert_listings(con: sqlite3.Connection, listings: Iterable[dict], run_iso: 
             (canonical,),
         ).fetchone()
         first_seen = existing["first_seen_iso"] if existing else run_iso
+        if (
+            not existing
+            and epoch_iso
+            and backdate_sources
+            and L["sources"]
+            and set(L["sources"]) <= set(backdate_sources)
+        ):
+            first_seen = epoch_iso
         if existing:
             cur.execute(
                 """

@@ -24,6 +24,11 @@ class RawListing:
     # Source's own availability label, canonicalized via status.normalize_status:
     # None (unknown) / "active" / "under_offer" / "sold" / "expired".
     status: str | None = None
+    # Region slugs the SOURCE's own location search placed this listing in
+    # (e.g. remax_elite's ~10 km proximity search around a region centre).
+    # normalize trusts these over a town/parish centroid when the card has no
+    # coordinates of its own; see normalize_one.
+    region_hints: list[str] = field(default_factory=list)
 
     @property
     def stable_id(self) -> str:
@@ -44,7 +49,10 @@ class NormalizedListing:
     lat: float | None
     lon: float | None
     location_text: str | None
-    location_confidence: Literal["exact", "approximate", "inferred", "none"]
+    # exact: coordinates from the source; approximate: town/parish centroid;
+    # proximity: the source's own location search put it in the region;
+    # inferred: boost keyword only; none: no location signal at all.
+    location_confidence: Literal["exact", "approximate", "proximity", "inferred", "none"]
     matched_regions: list[str] = field(default_factory=list)
     keyword_boost: bool = False
     listed_on_iso: str | None = None

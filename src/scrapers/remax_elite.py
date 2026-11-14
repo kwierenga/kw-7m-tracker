@@ -1,65 +1,99 @@
-"""remax-elite.com.jm - RE/MAX Elite Jamaica sale listings."""
+"""remax-elite.com.jm - RE/MAX Elite Jamaica sale listings.
+
+The site's default search lists its ~1,100 sale listings most-expensive
+first and answers 403 past page ~30, so a flat walk stopped around US$1M
+and never reached a listing under the budget caps (no in-region hit between
+2026-07-01 and 2026-11-13). It also offers a proximity search —
+?lattitude=&longitude= — returning listings within roughly 10 km of a
+point: checked 2026-11-13 against the coordinates on 59 detail pages, the
+farthest was 6.1 miles out. So each region's centre is walked with that
+search, cheapest first (range=L), stopping at the first page whose cheapest
+card is over the region's home budget. Cards only name a district and
+parish, so each result carries the region it was found near as a hint
+(RawListing.region_hints) and normalize trusts that over a centroid.
+
+Nearly every ID is MLS-... — the Realtors Association feed that the WAF-blocked
+golden_gates / sagicor / century21 sites mirror — so this walk recovers most
+of what those blocks hide.
+"""
 from __future__ import annotations
 
 import re
 from datetime import datetime, timezone
+from urllib.parse import urlencode
 
 from bs4 import BeautifulSoup
 from curl_cffi import requests as cf
 
+from ..fx import parse_price
 from ..models import RawListing
+from ..regions import REGIONS, Region
 from ..status import normalize_status
 from ._throttle import Throttle, polite_get
 
 SOURCE = "remax_elite"
 BASE = "https://remax-elite.com.jm"
-PAGE_LIMIT = 18  # site default; matches their ?limit=18
+PER_PAGE = 100  # the site honours limit=100 (its form default is 18)
+# 1,500 cards per centre. The busiest centre (Upton) had ~600 under budget
+# in 2026-11; the budget stop below normally ends a walk after 5-7 pages.
+MAX_PAGES_PER_REGION = 15
 
-# Site exposes hundreds of pages of sale listings. Stop early if pages run out.
-# Cap conservatively so a one-shot scrape stays bounded.
-MAX_PAGES = 60
+
+def _search_url(region: Region, page: int) -> str:
+    return f"{BASE}/property-search?" + urlencode({
+        "rent_sale": "sale",
+        "lattitude": f"{region.lat:.6f}",  # sic: the site's own parameter name
+        "longitude": f"{region.lon:.6f}",
+        "range": "L",  # Low - High
+        "limit": PER_PAGE,
+        "page": page,
+    })
 
 
-def _build_urls() -> list[str]:
-    return [
-        f"{BASE}/property-search?rent_sale=sale&page={p}&limit={PAGE_LIMIT}"
-        for p in range(1, MAX_PAGES + 1)
-    ]
+def _cheapest_usd(raws: list[RawListing]) -> float:
+    prices = [p for p, _ in (parse_price(r.raw_price or "") for r in raws) if p is not None]
+    return min(prices) if prices else 0.0
 
 
 def scrape() -> list[RawListing]:
-    out: list[RawListing] = []
-    seen: set[str] = set()
-    consecutive_empty = 0
+    out: dict[str, RawListing] = {}  # url -> listing; hints merge when regions overlap
+    saw_200 = False
+    last_status: int | None = None
     throttle = Throttle()
     with cf.Session(impersonate="chrome131") as s:
         try:
             polite_get(s, f"{BASE}/", throttle, allow_redirects=True, timeout=30)
         except Exception:  # noqa: BLE001
             pass
-        for url in _build_urls():
-            try:
-                r = polite_get(s, url, throttle, allow_redirects=True, timeout=30)
+        for region in REGIONS:
+            for page in range(1, MAX_PAGES_PER_REGION + 1):
+                try:
+                    r = polite_get(s, _search_url(region, page), throttle, allow_redirects=True, timeout=30)
+                except Exception:  # noqa: BLE001
+                    break
+                last_status = r.status_code
                 if r.status_code != 200:
-                    consecutive_empty += 1
-                    if consecutive_empty >= 2:
-                        break
-                    continue
-                new_count = 0
-                for raw in _parse(r.text):
-                    if raw.url not in seen:
-                        seen.add(raw.url)
-                        out.append(raw)
-                        new_count += 1
-                if new_count == 0:
-                    consecutive_empty += 1
-                    if consecutive_empty >= 2:
-                        break
-                else:
-                    consecutive_empty = 0
-            except Exception:  # noqa: BLE001
-                continue
-    return out
+                    break  # past the last page the site answers 403
+                saw_200 = True
+                raws = _parse(r.text)
+                if not raws:
+                    break
+                for raw in raws:
+                    kept = out.get(raw.url)
+                    if kept is None:
+                        raw.region_hints.append(region.slug)
+                        out[raw.url] = raw
+                    elif region.slug not in kept.region_hints:
+                        kept.region_hints.append(region.slug)
+                # Ascending by price: once a page's cheapest card is over the
+                # region's larger (home) budget, nothing further can match.
+                if _cheapest_usd(raws) > region.home_budget_usd:
+                    break
+    # A fully-blocked source must raise (-> recorded as failed) rather than
+    # return an empty list that masquerades as a clean 0.
+    if not saw_200:
+        raise RuntimeError(f"{SOURCE}: no successful response (last status {last_status})")
+    return list(out.values())
 
 
 _BG_RE = re.compile(r"background-image\s*:\s*url\(\s*['\"]?([^'\")]+)['\"]?\s*\)", re.I)

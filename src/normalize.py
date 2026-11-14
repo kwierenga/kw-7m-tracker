@@ -60,6 +60,16 @@ def normalize_one(raw: RawListing) -> NormalizedListing:
             lat, lon = centroid
             confidence = "approximate"
 
+    # A source that ran its own proximity search around a region centre knows
+    # the listing's whereabouts to ~6 miles — far better than the parish
+    # centroid a card like "Hampstead, St. Ann" would otherwise resolve to
+    # (every such card lands in whichever region the parish centroid happens
+    # to sit in). So when the card has no coordinates of its own, the hints
+    # decide region membership outright.
+    hinted = bool(raw.region_hints) and confidence != "exact"
+    if hinted:
+        confidence = "proximity"
+
     matched: list[str] = []
     boosted = False
     for region in REGIONS:
@@ -67,7 +77,9 @@ def normalize_one(raw: RawListing) -> NormalizedListing:
         if kb:
             boosted = True
         in_geo = False
-        if lat is not None and lon is not None:
+        if hinted:
+            in_geo = region.slug in raw.region_hints
+        elif lat is not None and lon is not None:
             d = haversine_miles(lat, lon, region.lat, region.lon)
             in_geo = d <= region.radius_miles
         if not in_geo and confidence == "none" and kb:

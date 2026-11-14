@@ -125,7 +125,16 @@ def run(dry_run: bool) -> int:
             }
             for L in merged
         ]
-        n_new_inserted, n_updated = upsert_listings(con, rows_for_db, run_iso)
+        backfilling = frozenset(
+            s for s, until in scrapers.BACKFILL_SOURCES.items()
+            if run_iso[:10] <= until and sources_counts.get(s, -1) > 0
+        )
+        epoch = tracker_epoch_iso(con)
+        if backfilling and epoch:
+            print(f"[store] backfill window for {sorted(backfilling)}: new rows backdated to {epoch[:10]}")
+        n_new_inserted, n_updated = upsert_listings(
+            con, rows_for_db, run_iso, backdate_sources=backfilling, epoch_iso=epoch,
+        )
         print(f"[store] inserted={n_new_inserted} updated={n_updated}")
 
         # Computed AFTER upsert because upsert is what populates this run's

@@ -57,12 +57,12 @@ GitHub Actions cron (daily 13:00 UTC = 8 AM Jamaica)
 | caribbeanrealestatemls.com | ⚠️ needs key | Read-only MCP catalogue (the site's `llms.txt` asks agents to use it rather than scrape) — exact price, coordinates, status; ~17 paced calls. Since 2026-10-21 it returns 401 without an account: create a free account on the site and store its API key as the `CARIBBEAN_MLS_ACCESS_KEY` repository secret |
 | cbjamaica.com (Coldwell Banker JA) | ✅ active | Featured + recent properties |
 | millennium properties | ✅ active | `/property-search?page=N` paginated |
-| golden gates realty JA | ⛔ blocked | Same template as Millennium. Its AWS load balancer 403s every client — GitHub Actions, a home connection, even a real headless browser — since 2026-07-14. Still tried daily; the digest shows an outage notice while it fails |
-| century21jm.com | ⛔ blocked | Long IDX search URL with `/page/N/limit/12/range/H` pagination. Same block as golden gates since 2026-07-14 |
+| golden gates realty JA | ⛔ blocked | Same template as Millennium. Its AWS WAF 403s hosting-provider IPs (GitHub Actions) since 2026-07-14; a home IP with `curl_cffi` got through on 2026-11-13, a plain Python client did not. Pure `MLS-` mirror, so remax_elite now carries its inventory. Still tried daily; the digest shows an outage notice while it fails |
+| century21jm.com | ⛔ blocked | Same block as golden gates since 2026-07-14. While blocked it moved to the shared vendor template (`div.property_listing_items`, `/property-search?rent_sale=sale&page=N&limit=100&range=L`); the parser needs rewriting if it is ever run from a residential IP |
 | xposure InteractiveLink | ✅ active | Manual ingest from `data/xposure_urls.txt` |
 | getkeez.com | ✅ active | Public JSON API at `/api/properties` — exact lat/lon, walked per parish (AN/MR/TR/PO/WE/EL) |
-| remax-elite.com.jm | ⚠️ check | `/property-search` pagination; ~500 cards a day but no listing inside a tracked region since 2026-07-01 — needs a look |
-| Sagicor Properties (sagicorproperties.com) | ⛔ blocked | Same template as Golden Gates; same block since 2026-07-14 |
+| remax-elite.com.jm | ✅ active | Walks each region centre with the site's own proximity search (`?lattitude=&longitude=`, ~10 km), cheapest first, until the budget cap; results carry the region as a hint. The old flat walk saw the ~500 most expensive listings only, hence no in-region hit 2026-07-01 → 2026-11-13. Nearly all IDs are `MLS-…`, the same feed the blocked sites mirror |
+| Sagicor Properties (sagicorproperties.com) | ⛔ blocked | Same template as Golden Gates; same block since 2026-07-14. Its `/property-search?…&parish=` URL now 404s, so the scraper needs re-discovery as well as a residential IP |
 | Sotheby's Jamaica | ❌ dropped | AWS WAF JS challenge — needs Playwright |
 | properstar.com/jamaica | ❌ dropped | Cloudflare-tier anti-bot; not worth it |
 | RE/MAX Jamaica | ❌ dropped | The .com domain is recruitment brochure, not listings |
@@ -172,6 +172,14 @@ The footer of every digest lists how many cards each scraper returned this run, 
 A scraper that returns **zero** listings is recorded as `FAILED` too (except `xposure`, which is manual ingest — see `MAY_RETURN_EMPTY` in [`src/scrapers/__init__.py`](src/scrapers/__init__.py)). An empty result from a real listings site means a layout change or a block; a silent 0 would hide it and let the source count as active for drop detection.
 
 A failed source's listings can't be shown (they weren't re-confirmed this run), so every failing source also gets a notice under the summary: when its current failure streak began and how many listings it's hiding (`store.source_outages`).
+
+### A newly added or fixed source must not flood 'new'
+
+A scraper that starts covering a region for the first time delivers hundreds of listings that have been on the market for months. `BACKFILL_SOURCES` in [`src/scrapers/__init__.py`](src/scrapers/__init__.py) names such a source and the last run date of its backfill window; rows first seen only through it are inserted with `first_seen_iso` = tracker epoch (`store.upsert_listings`), so `diff.classify` treats them like the launch cohort (age unknown → active) instead of 'new'. Remove the entry once the window has passed.
+
+### Region hints from a source's own location search
+
+Cards on most sites only name a district and parish, and a parish centroid is a poor stand-in for "within 7 miles" (every "…, St. Ann" card lands wherever that centroid sits — Mammee Bay). When a scraper runs the site's own proximity search around a region centre, it records the region in `RawListing.region_hints`; `normalize_one` then uses the hints for region membership (`location_confidence='proximity'`) instead of the centroid. Exact coordinates in the card still win.
 
 ### Price changes compare the seller's asking price
 
