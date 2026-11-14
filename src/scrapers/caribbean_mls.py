@@ -4,8 +4,12 @@ The site was rebuilt in 2026-09: the Next.js __NEXT_DATA__ payload and the
 /real-estate/ URLs the old HTML scraper relied on are gone, and its llms.txt
 asks automated clients to query the read-only catalogue instead of scraping
 pages. The catalogue returns the asking price in the source currency,
-property-level coordinates and status. Anonymous limits are 20 requests/minute
-and 25 rows per search, so a full Jamaica walk (~400 rows) is ~17 paced calls.
+property-level coordinates and status. Since 2026-10-21 the catalogue answers
+401 to anonymous callers: it wants a free account on the site and that
+account's API key in the X-MCP-Access-Key header (llms.txt documents this).
+Set CARIBBEAN_MLS_ACCESS_KEY in the environment — the workflow maps it from
+the repository secret of the same name. Limits are 20 requests/minute and 25
+rows per search, so a full Jamaica walk (~400 rows) is ~17 paced calls.
 
 25-row pages exceed the server's payload ceiling, so it drops media from them —
 most listings arrive without a photo.
@@ -13,6 +17,7 @@ most listings arrive without a photo.
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 from datetime import datetime, timezone
@@ -31,6 +36,11 @@ PAGE_SIZE = 25  # server maximum per search
 MAX_PAGES = 40  # 1,000 rows — ~2.5x the Jamaica inventory in 2026-09
 REQUEST_GAP_S = 3.5  # keeps a full walk under the anonymous 20 requests/minute
 PROTOCOL_VERSION = "2025-03-26"
+ACCESS_KEY_ENV = "CARIBBEAN_MLS_ACCESS_KEY"
+
+
+def _access_key() -> str:
+    return os.environ.get(ACCESS_KEY_ENV, "").strip()
 
 
 def scrape(transport: httpx.BaseTransport | None = None) -> list[RawListing]:
@@ -104,10 +114,21 @@ class _Catalogue:
         if wait > 0:
             time.sleep(wait)
         headers = {"Accept": "application/json, text/event-stream"}
+        key = _access_key()
+        if key:
+            headers["X-MCP-Access-Key"] = key
         if self._session_id:
             headers["Mcp-Session-Id"] = self._session_id
         r = self._client.post(MCP_URL, json=body, headers=headers)
         self._last_request = time.monotonic()
+        if r.status_code == 401:
+            # Make the fix obvious in the run notes instead of a bare 401.
+            why = (
+                f"the {ACCESS_KEY_ENV} it was given was rejected"
+                if key
+                else f"no {ACCESS_KEY_ENV} set — create a free account at {BASE} and add its API key as that secret"
+            )
+            raise RuntimeError(f"{SOURCE}: catalogue requires an account API key (401): {why}")
         r.raise_for_status()
         self._session_id = r.headers.get("mcp-session-id", self._session_id)
         if "id" not in body:

@@ -54,7 +54,7 @@ GitHub Actions cron (daily 13:00 UTC = 8 AM Jamaica)
 | Source | Status | Notes |
 |---|---|---|
 | realtor.com international Jamaica | ✅ active | ~25 cards/page, server-rendered |
-| caribbeanrealestatemls.com | ✅ active | Public read-only MCP catalogue (the site's `llms.txt` asks agents to use it rather than scrape) — exact price, coordinates, status; ~17 paced calls |
+| caribbeanrealestatemls.com | ⚠️ needs key | Read-only MCP catalogue (the site's `llms.txt` asks agents to use it rather than scrape) — exact price, coordinates, status; ~17 paced calls. Since 2026-10-21 it returns 401 without an account: create a free account on the site and store its API key as the `CARIBBEAN_MLS_ACCESS_KEY` repository secret |
 | cbjamaica.com (Coldwell Banker JA) | ✅ active | Featured + recent properties |
 | millennium properties | ✅ active | `/property-search?page=N` paginated |
 | golden gates realty JA | ⛔ blocked | Same template as Millennium. Its AWS load balancer 403s every client — GitHub Actions, a home connection, even a real headless browser — since 2026-07-14. Still tried daily; the digest shows an outage notice while it fails |

@@ -26,6 +26,9 @@ jobs:
         continue-on-error: true   # tests are alerts, not blockers — broken parser shouldn't kill the daily run
 
       - name: Run daily scrape + publish digest
+        env:
+          # caribbeanrealestatemls.com's catalogue needs a (free) account key since 2026-10-21.
+          CARIBBEAN_MLS_ACCESS_KEY: ${{ secrets.CARIBBEAN_MLS_ACCESS_KEY }}
         run: python -m src.main
 
       - name: Commit DB and digest (only when something changed)
