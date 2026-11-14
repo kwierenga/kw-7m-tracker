@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timezone
-from urllib.parse import urlencode
+from urllib.parse import unquote, urlencode
 
 from bs4 import BeautifulSoup
 from curl_cffi import requests as cf
@@ -97,6 +97,51 @@ def scrape() -> list[RawListing]:
 
 
 _BG_RE = re.compile(r"background-image\s*:\s*url\(\s*['\"]?([^'\")]+)['\"]?\s*\)", re.I)
+# Detail URLs are /property/<Parish>+<Town>/MLS-…, e.g. "St-dot-+Ann++Runaway+Bay".
+_URL_LOC_RE = re.compile(r"/property/([^/]+)/(?:MLS|RME)-", re.I)
+_PARISHES = (
+    "Kingston & St. Andrew", "St. Elizabeth", "St. Catherine", "Westmoreland",
+    "Manchester", "St. Thomas", "Trelawny", "Clarendon", "Portland", "St. James",
+    "Hanover", "St. Mary", "St. Ann",
+)
+
+
+def _town_from_url(url: str) -> str | None:
+    m = _URL_LOC_RE.search(url)
+    if not m:
+        return None
+    slug = unquote(m.group(1)).replace("-dot-", ".").replace("-and-", "&").replace("+", " ")
+    slug = re.sub(r"\s+", " ", slug).strip()
+    for parish in _PARISHES:
+        if slug.lower().startswith(parish.lower()):
+            town = slug[len(parish):].strip()
+            return town or None
+    return None
+
+
+def _location_with_town(location: str | None, url: str) -> str | None:
+    """Cards name only a district and parish ("Cardiff Hall Plantation , St. Ann");
+    the URL carries the town ("Runaway Bay"). Fold it in so the digest reads
+    "Cardiff Hall Plantation, Runaway Bay, St. Ann"."""
+    if location:
+        location = re.sub(r"\s*,\s*", ", ", location).strip(" ,")
+    town = _town_from_url(url)
+    if not town:
+        return location
+    if not location:
+        return town
+    if town.lower() in location.lower():
+        return location
+    parts = location.split(", ")
+    # The card truncates long names ("Discovery Ba"): a token that is a prefix
+    # of the town is the town — replace it rather than repeat it.
+    for i, part in enumerate(parts[:-1]):
+        if len(part) >= 6 and town.lower().startswith(part.lower()):
+            parts[i] = town
+            return ", ".join(parts)
+    if len(parts) > 1:
+        return ", ".join(parts[:-1] + [town, parts[-1]])
+    return f"{location}, {town}"
 _ID_RE = re.compile(r"/(MLS-[A-Za-z0-9]+|RME-[A-Za-z0-9]+)/?$")
 
 
@@ -132,7 +177,7 @@ def _parse(html: str) -> list[RawListing]:
             source_id = m.group(1) if m else url.rstrip("/").split("/")[-1]
 
         loc_el = card.select_one(".box-collectionHomeDetails h5")
-        location = loc_el.get_text(" ", strip=True) if loc_el else None
+        location = _location_with_town(loc_el.get_text(" ", strip=True) if loc_el else None, url)
 
         price_el = card.select_one(".box-collectionHomeDetails p")
         price = price_el.get_text(" ", strip=True) if price_el else None
