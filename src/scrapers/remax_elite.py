@@ -19,6 +19,7 @@ of what those blocks hide.
 from __future__ import annotations
 
 import re
+import time
 from datetime import datetime, timezone
 from urllib.parse import unquote, urlencode
 
@@ -67,9 +68,16 @@ def scrape() -> list[RawListing]:
             pass
         for region in REGIONS:
             for page in range(1, MAX_PAGES_PER_REGION + 1):
-                try:
-                    r = polite_get(s, _search_url(region, page), throttle, allow_redirects=True, timeout=30)
-                except Exception:  # noqa: BLE001
+                # Proximity pages took 20-30 s each on 2026-11-14; a short
+                # timeout truncates the region and strands its listings.
+                r = None
+                for attempt in range(2):
+                    try:
+                        r = polite_get(s, _search_url(region, page), throttle, allow_redirects=True, timeout=90)
+                        break
+                    except Exception:  # noqa: BLE001
+                        time.sleep(3)
+                if r is None:
                     break
                 last_status = r.status_code
                 if r.status_code != 200:

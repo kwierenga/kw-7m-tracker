@@ -502,6 +502,15 @@ def listings_dropped_in_run(
     return confirmed
 
 
+def latest_source_counts(con: sqlite3.Connection, before_run_iso: str) -> dict[str, int]:
+    """Per-source card counts from the most recent run before before_run_iso."""
+    row = con.execute(
+        "SELECT sources_json FROM run_log WHERE run_iso < ? ORDER BY run_iso DESC LIMIT 1",
+        (before_run_iso,),
+    ).fetchone()
+    return json.loads(row["sources_json"] or "{}") if row else {}
+
+
 def write_run_log(
     con: sqlite3.Connection,
     run_iso: str,

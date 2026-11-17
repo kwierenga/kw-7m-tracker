@@ -18,6 +18,7 @@ from .store import (
     connect,
     find_price_drops,
     last_price_change_iso,
+    latest_source_counts,
     listings_dropped_in_run,
     listings_seen_in_run,
     lookup_canonical_id,
@@ -28,6 +29,25 @@ from .store import (
     upsert_listings,
     write_run_log,
 )
+
+
+# A source that returns fewer than this fraction of its previous run's cards
+# most likely had a truncated walk (timeouts, a mid-walk 403), not a market
+# that halved overnight. Its listings are kept, but it is excluded from drop
+# detection for the run so the ones it missed aren't probed and reported.
+PARTIAL_SCRAPE_RATIO = 0.5
+# Hard cap on dropped-candidate URL probes per run. Each probe is a paced
+# request to a site that may be slow (remax pages took 20-30 s on
+# 2026-11-14); hundreds of them would stretch the run into hours.
+MAX_DROP_PROBES = 60
+
+
+def partial_sources(counts: dict[str, int], prev_counts: dict[str, int], ratio: float = PARTIAL_SCRAPE_RATIO) -> list[str]:
+    """Sources whose count fell below ratio × their previous run's count."""
+    return sorted(
+        s for s, n in counts.items()
+        if n > 0 and prev_counts.get(s, 0) > 0 and n < ratio * prev_counts[s]
+    )
 
 
 def previous_run_iso(con) -> str | None:
@@ -83,6 +103,15 @@ def run(dry_run: bool) -> int:
     with connect() as con:
         prev_run = previous_run_iso(con)
         print(f"[store] previous run = {prev_run}")
+
+        partial = partial_sources(sources_counts, latest_source_counts(con, run_iso))
+        for s in partial:
+            prev_n = latest_source_counts(con, run_iso)[s]
+            notes_lines.append(
+                f"{s}: partial scrape ({sources_counts[s]} cards vs {prev_n} last run) — excluded from drop detection"
+            )
+            print(f"[scrape] {s}: partial ({sources_counts[s]} vs {prev_n}) — not used for drop detection")
+        sources_active = [s for s in sources_active if s not in partial]
 
         # Resolve canonical_ids BEFORE dedup so two source-rows for the same
         # property carry the same canonical from the start. New (source,
@@ -160,6 +189,12 @@ def run(dry_run: bool) -> int:
         # without pagination) silently rotate listings off our scrape window
         # even though they're still active. URL probe catches that — only
         # 404/410 confirms the drop.
+        if len(candidates) > MAX_DROP_PROBES:
+            notes_lines.append(
+                f"{len(candidates)} drop candidates — probed {MAX_DROP_PROBES}, the rest held as still active"
+            )
+            print(f"[verify-drops] {len(candidates)} candidates — capping probes at {MAX_DROP_PROBES}")
+            candidates = candidates[:MAX_DROP_PROBES]
         if candidates:
             dropped, likely_sold, false_drops = verify_dropped(
                 candidates, scrapers.COMPLETE_COVERAGE_SOURCES
