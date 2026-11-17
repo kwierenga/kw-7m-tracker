@@ -165,6 +165,8 @@ When dedup merges listings from multiple sources, the digest shows the **most re
 
 `store.listings_dropped_in_run` only flags a listing as dropped if **all of its sources successfully scraped this run**. If any source the listing depends on failed or didn't run, the listing is held in 'still active' rather than reported as dropped. Otherwise a single transient cb_jamaica 503 would fire dozens of false drop alerts every day.
 
+Two further guards in `src/main.py`: a source that returns fewer than half its previous run's cards (`PARTIAL_SCRAPE_RATIO`) is treated as a truncated walk and excluded from drop detection for that run, its listings kept; and at most `MAX_DROP_PROBES` candidate URLs are probed per run, the rest staying 'still active'. On 2026-11-14 remax pages took 20-30 s each, a region's walk timed out, and the 70 listings it missed were each probed before being (correctly) held — a 31-minute run.
+
 ### Per-source counts in every digest
 
 The footer of every digest lists how many cards each scraper returned this run, with failed sources marked `FAILED` in red. Day-over-day comparisons in `data/last_run_status.json` (and the `run_log` table inside `listings.db`) make scraper rot visible quickly.
