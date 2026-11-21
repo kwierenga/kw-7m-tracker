@@ -57,6 +57,5 @@ COMPLETE_COVERAGE_SOURCES = frozenset({"keez"})
 # seen only through such a source are backdated to the tracker epoch
 # (store.upsert_listings) so a scraper fix doesn't dump hundreds of long-listed
 # properties into 'new'. Remove an entry once its window has passed.
-# remax_elite: its proximity walk (2026-11-13) reaches ~1,500 in-budget MLS
-# listings that the old most-expensive-first walk never got to.
-BACKFILL_SOURCES: dict[str, str] = {"remax_elite": "2026-11-20"}
+# (remax_elite had one through 2026-11-20 for its proximity-walk rewrite.)
+BACKFILL_SOURCES: dict[str, str] = {}
